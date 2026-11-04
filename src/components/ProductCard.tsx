@@ -1,24 +1,23 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Ruler, ShoppingBag, Check } from 'lucide-react';
 import { Product } from '../types';
+import { formatPrice } from '../utils/formatters';
 
 interface ProductCardProps {
   product: Product;
   isInCart: boolean;
   onOpenDetail: (product: Product) => void;
   onAddToCart: (product: Product) => void;
+  onBuyNow?: (product: Product) => void;
 }
 
-export const ProductCard: React.FC<ProductCardProps> = ({
+export const ProductCard = memo<ProductCardProps>(({
   product,
   isInCart,
   onOpenDetail,
-  onAddToCart
+  onAddToCart,
+  onBuyNow
 }) => {
-  const formatPrice = (val: number) => {
-    return '$' + val.toLocaleString('es-AR');
-  };
-
   return (
     <article className="group bg-[#F4E8E8] text-[#2c221e] rounded-2xl overflow-hidden shadow-lg border border-[#DEC0C0] flex flex-col transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
       {/* Image Container with Badges */}
@@ -111,22 +110,33 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           {isInCart ? (
             <button
               disabled
-              className="py-2.5 px-3.5 rounded-xl bg-[#68544d]/20 text-[#5c4b45] text-xs font-bold flex items-center gap-1.5 cursor-not-allowed"
+              className="py-2 px-3 rounded-xl bg-[#68544d]/20 text-[#5c4b45] text-xs font-bold flex items-center gap-1.5 cursor-not-allowed"
             >
               <Check className="w-4 h-4 text-emerald-700" />
               <span>En Carrito</span>
             </button>
           ) : (
-            <button
-              onClick={() => onAddToCart(product)}
-              className="py-2.5 px-4 rounded-xl bg-[#EA8A8A] hover:bg-[#e37575] active:scale-95 text-[#2c221e] text-xs font-bold shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
-            >
-              <ShoppingBag className="w-4 h-4" />
-              <span>Comprar</span>
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => onAddToCart(product)}
+                className="py-2 px-2.5 rounded-xl border border-[#68544d]/40 hover:bg-[#68544d]/10 text-[#68544d] text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                title="Agregar al Carrito"
+              >
+                <ShoppingBag className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Agregar</span>
+              </button>
+              <button
+                onClick={() => onBuyNow ? onBuyNow(product) : onAddToCart(product)}
+                className="py-2 px-3 rounded-xl bg-[#EA8A8A] hover:bg-[#e37575] active:scale-95 text-[#2c221e] text-xs font-bold shadow-md transition-all flex items-center gap-1 cursor-pointer whitespace-nowrap"
+              >
+                <span>Iniciar Compra</span>
+              </button>
+            </div>
           )}
         </div>
       </div>
     </article>
   );
-};
+});
+
+ProductCard.displayName = 'ProductCard';

@@ -87,7 +87,9 @@ export default async function handler(req: any, res: any) {
         pending: `${baseUrl}/?payment_status=pending`
       },
       auto_return: 'approved',
-      statement_descriptor: 'AURA PRELOVED'
+      statement_descriptor: 'AURA PRELOVED',
+      external_reference: items.map(i => i.id).join(','),
+      notification_url: `${baseUrl}/api/webhook`
     };
 
     const mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {

@@ -1,30 +1,45 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, lazy, Suspense, useCallback } from 'react';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
 import { FiltersBar } from './components/FiltersBar';
 import { ProductCard } from './components/ProductCard';
-import { ProductDetailModal } from './components/ProductDetailModal';
-import { MeasurementsGuideModal } from './components/MeasurementsGuideModal';
-import { CartDrawer } from './components/CartDrawer';
-import { CheckoutModal } from './components/CheckoutModal';
 import { Footer } from './components/Footer';
-import { MOCK_CATALOG, STORE_CONFIG, SHIPPING_RATES } from './data/mockCatalog';
-import { Product, FilterState, ShippingConfig } from './types';
+import { STORE_CONFIG, SHIPPING_RATES } from './data/mockCatalog';
+import { Product, ShippingConfig } from './types';
+import { useCart } from './hooks/useCart';
+import { useCatalog } from './hooks/useCatalog';
+import { useCatalogFilters } from './hooks/useCatalogFilters';
 import { Check, Sparkles } from 'lucide-react';
 
-const STORAGE_KEY = 'aura_preloved_cart_v1';
+// Lazy loading de modales y drawers: se descargan bajo demanda sin penalizar la carga inicial (<0.8s FCP)
+const ProductDetailModal = lazy(() =>
+  import('./components/ProductDetailModal').then(m => ({ default: m.ProductDetailModal }))
+);
+const MeasurementsGuideModal = lazy(() =>
+  import('./components/MeasurementsGuideModal').then(m => ({ default: m.MeasurementsGuideModal }))
+);
+const CartDrawer = lazy(() =>
+  import('./components/CartDrawer').then(m => ({ default: m.CartDrawer }))
+);
+const CheckoutModal = lazy(() =>
+  import('./components/CheckoutModal').then(m => ({ default: m.CheckoutModal }))
+);
+const AdminDashboard = lazy(() =>
+  import('./components/admin/AdminDashboard').then(m => ({ default: m.AdminDashboard }))
+);
 
 export default function App() {
-  const [products] = useState<Product[]>(MOCK_CATALOG);
-  const [cart, setCart] = useState<Product[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  const { products, isLoading, isLive, refreshCatalog } = useCatalog();
+  const { cart, itemCount, isInCart, addToCart, removeFromCart, clearCart } = useCart();
+  const {
+    filters,
+    filteredProducts,
+    availableSizes,
+    updateFilters,
+    resetFilters
+  } = useCatalogFilters(products);
 
+  // Estado de Envío
   const [shipping, setShipping] = useState<ShippingConfig>({
     province: 'CABA',
     postalCode: '1425',
@@ -33,122 +48,73 @@ export default function App() {
     service: SHIPPING_RATES.cabaGba.name
   });
 
-  const [filters, setFilters] = useState<FilterState>({
-    category: 'all',
-    size: 'all',
-    condition: 'all',
-    search: '',
-    sort: 'featured'
-  });
-
-  // Modal States
+  // Modales
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [isAdminOpen, setIsAdminOpen] = useState(false);
 
-  // Toast State
+  React.useEffect(() => {
+    const checkHash = () => {
+      if (window.location.hash === '#admin') {
+        setIsAdminOpen(true);
+      }
+    };
+    checkHash();
+    window.addEventListener('hashchange', checkHash);
+    return () => window.removeEventListener('hashchange', checkHash);
+  }, []);
+
+  // Toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const showToast = (msg: string) => {
+  const showToast = useCallback((msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
-  };
+  }, []);
 
-  // Persist cart
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(cart));
-    } catch (e) {
-      console.warn('Error guardando carrito en localStorage:', e);
+  const handleAddToCart = useCallback((product: Product) => {
+    const result = addToCart(product);
+    showToast(result.message);
+    if (result.success) {
+      setIsCartOpen(true);
     }
-  }, [cart]);
+  }, [addToCart, showToast]);
 
-  // Handle Cart Operations
-  const handleAddToCart = (product: Product) => {
-    if (cart.some(item => item.id === product.id)) {
-      showToast('Esta prenda única ya está en tu carrito');
-      return;
+  const handleBuyNow = useCallback((product: Product) => {
+    if (!isInCart(product.id)) {
+      addToCart(product);
     }
-    setCart(prev => [...prev, product]);
-    showToast(`¡${product.name} agregada al carrito!`);
-    setIsCartOpen(true);
-  };
+    setIsCartOpen(false);
+    setIsDetailOpen(false);
+    setIsCheckoutOpen(true);
+  }, [isInCart, addToCart]);
 
-  const handleRemoveFromCart = (productId: string) => {
-    setCart(prev => prev.filter(item => item.id !== productId));
+  const handleRemoveFromCart = useCallback((productId: string) => {
+    removeFromCart(productId);
     showToast('Prenda quitada del carrito');
-  };
+  }, [removeFromCart, showToast]);
 
-  const handleClearCart = () => {
-    setCart([]);
-    showToast('Carrito vaciado');
-  };
-
-  const handleShippingChange = (regionKey: string) => {
+  const handleShippingChange = useCallback((regionKey: string) => {
     const rate = SHIPPING_RATES[regionKey] || SHIPPING_RATES.cabaGba;
     setShipping(prev => ({
       ...prev,
       cost: rate.price,
       service: rate.name
     }));
-  };
+  }, []);
 
-  // Filter and Sort Logic
-  const filteredProducts = useMemo(() => {
-    return products.filter(p => {
-      // Category filter
-      if (filters.category !== 'all' && p.category !== filters.category) {
-        return false;
-      }
-      // Size filter
-      if (filters.size !== 'all' && p.size !== filters.size) {
-        return false;
-      }
-      // Condition filter
-      if (filters.condition !== 'all' && !p.condition.includes(filters.condition)) {
-        return false;
-      }
-      // Search term
-      if (filters.search) {
-        const query = filters.search.toLowerCase();
-        const matchName = p.name.toLowerCase().includes(query);
-        const matchDesc = p.description.toLowerCase().includes(query);
-        const matchSize = p.size.toLowerCase().includes(query);
-        const matchCategory = p.category.toLowerCase().includes(query);
-        if (!matchName && !matchDesc && !matchSize && !matchCategory) {
-          return false;
-        }
-      }
-      return true;
-    }).sort((a, b) => {
-      if (filters.sort === 'price-asc') return a.price - b.price;
-      if (filters.sort === 'price-desc') return b.price - a.price;
-      if (filters.sort === 'newest') return (b.createdAt || '').localeCompare(a.createdAt || '');
-      return 0; // featured default
-    });
-  }, [products, filters]);
-
-  const handleResetFilters = () => {
-    setFilters({
-      category: 'all',
-      size: 'all',
-      condition: 'all',
-      search: '',
-      sort: 'featured'
-    });
-  };
-
-  const handleOpenDetail = (product: Product) => {
+  const handleOpenDetail = useCallback((product: Product) => {
     setSelectedProduct(product);
     setIsDetailOpen(true);
-  };
+  }, []);
 
-  const handleScrollToCatalog = () => {
+  const handleScrollToCatalog = useCallback(() => {
     const el = document.getElementById('catalogo');
     if (el) el.scrollIntoView({ behavior: 'smooth' });
-  };
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#68544d] text-[#FAF6F0] selection:bg-[#EA8A8A] selection:text-white">
@@ -164,14 +130,14 @@ export default function App() {
       {/* Top Navbar */}
       <Navbar 
         storeName={STORE_CONFIG.storeName}
-        cartCount={cart.length}
+        cartCount={itemCount}
         onOpenCart={() => setIsCartOpen(true)}
         searchTerm={filters.search}
-        onSearchChange={(val) => setFilters(prev => ({ ...prev, search: val }))}
+        onSearchChange={(val) => updateFilters({ search: val })}
       />
 
       <main className="flex-1">
-        {/* Hero Section */}
+        {/* Hero Section (Memoizado) */}
         <Hero 
           onOpenGuide={() => setIsGuideOpen(true)}
           onExplore={handleScrollToCatalog}
@@ -181,15 +147,22 @@ export default function App() {
         <div id="catalogo">
           <FiltersBar 
             filters={filters}
-            onFilterChange={(newFilters) => setFilters(prev => ({ ...prev, ...newFilters }))}
-            onResetFilters={handleResetFilters}
+            onFilterChange={updateFilters}
+            onResetFilters={resetFilters}
             totalProductsCount={filteredProducts.length}
+            availableSizes={availableSizes}
           />
         </div>
 
         {/* Product Grid Section */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          {filteredProducts.length === 0 ? (
+          {isLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="animate-pulse bg-white/5 rounded-2xl h-96 border border-white/5" />
+              ))}
+            </div>
+          ) : filteredProducts.length === 0 ? (
             <div className="text-center py-20 bg-white/5 rounded-3xl border border-white/10 max-w-lg mx-auto p-6">
               <Sparkles className="w-10 h-10 text-[#EA8A8A] mx-auto mb-3" />
               <h3 className="font-serif text-xl font-bold text-white mb-2">
@@ -199,7 +172,7 @@ export default function App() {
                 Probá cambiando el talle o limpiá la búsqueda para ver todas las piezas disponibles.
               </p>
               <button
-                onClick={handleResetFilters}
+                onClick={resetFilters}
                 className="py-2.5 px-6 rounded-full bg-[#EA8A8A] hover:bg-[#e37575] text-[#2c221e] font-semibold text-xs shadow-md transition-all cursor-pointer"
               >
                 Ver Todo el Catálogo
@@ -211,9 +184,10 @@ export default function App() {
                 <ProductCard 
                   key={product.id}
                   product={product}
-                  isInCart={cart.some(item => item.id === product.id)}
+                  isInCart={isInCart(product.id)}
                   onOpenDetail={handleOpenDetail}
                   onAddToCart={handleAddToCart}
+                  onBuyNow={handleBuyNow}
                 />
               ))}
             </div>
@@ -221,52 +195,81 @@ export default function App() {
         </section>
       </main>
 
-      {/* Footer */}
+      {/* Footer (Memoizado) */}
       <Footer 
         storeName={STORE_CONFIG.storeName}
         tagline={STORE_CONFIG.tagline}
+        onOpenAdmin={() => setIsAdminOpen(true)}
       />
 
-      {/* Modals & Drawers */}
-      <ProductDetailModal 
-        product={selectedProduct}
-        isOpen={isDetailOpen}
-        isInCart={selectedProduct ? cart.some(item => item.id === selectedProduct.id) : false}
-        onClose={() => setIsDetailOpen(false)}
-        onAddToCart={handleAddToCart}
-        onOpenGuide={() => {
-          setIsDetailOpen(false);
-          setIsGuideOpen(true);
-        }}
-      />
+      {/* Modales y Drawers bajo demanda (Code Splitting con React.lazy) */}
+      <Suspense fallback={null}>
+        {isDetailOpen && selectedProduct && (
+          <ProductDetailModal 
+            product={selectedProduct}
+            isOpen={isDetailOpen}
+            isInCart={isInCart(selectedProduct.id)}
+            onClose={() => setIsDetailOpen(false)}
+            onAddToCart={handleAddToCart}
+            onBuyNow={handleBuyNow}
+            onOpenGuide={() => {
+              setIsDetailOpen(false);
+              setIsGuideOpen(true);
+            }}
+          />
+        )}
 
-      <MeasurementsGuideModal 
-        isOpen={isGuideOpen}
-        onClose={() => setIsGuideOpen(false)}
-      />
+        {isGuideOpen && (
+          <MeasurementsGuideModal 
+            isOpen={isGuideOpen}
+            onClose={() => setIsGuideOpen(false)}
+          />
+        )}
 
-      <CartDrawer 
-        isOpen={isCartOpen}
-        cart={cart}
-        shipping={shipping}
-        onClose={() => setIsCartOpen(false)}
-        onRemoveItem={handleRemoveFromCart}
-        onShippingChange={handleShippingChange}
-        onProceedToCheckout={() => setIsCheckoutOpen(true)}
-        onExplore={handleScrollToCatalog}
-      />
+        {isCartOpen && (
+          <CartDrawer 
+            isOpen={isCartOpen}
+            cart={cart}
+            shipping={shipping}
+            onClose={() => setIsCartOpen(false)}
+            onRemoveItem={handleRemoveFromCart}
+            onShippingChange={handleShippingChange}
+            onProceedToCheckout={() => setIsCheckoutOpen(true)}
+            onExplore={handleScrollToCatalog}
+          />
+        )}
 
-      <CheckoutModal 
-        isOpen={isCheckoutOpen}
-        cart={cart}
-        shipping={shipping}
-        whatsappNumber={STORE_CONFIG.whatsappNumber}
-        onClose={() => setIsCheckoutOpen(false)}
-        onSuccessOrder={() => {
-          handleClearCart();
-          showToast('¡Muchas gracias por tu compra en Aura Pre-Loved!');
-        }}
-      />
+        {isCheckoutOpen && (
+          <CheckoutModal 
+            isOpen={isCheckoutOpen}
+            cart={cart}
+            shipping={shipping}
+            whatsappNumber={STORE_CONFIG.whatsappNumber}
+            onClose={() => setIsCheckoutOpen(false)}
+            onSuccessOrder={() => {
+              clearCart();
+              showToast('¡Muchas gracias por tu compra en Aura Pre-Loved!');
+            }}
+          />
+        )}
+
+        {isAdminOpen && (
+          <AdminDashboard 
+            products={products}
+            onClose={() => {
+              setIsAdminOpen(false);
+              if (window.location.hash === '#admin') {
+                window.history.pushState(null, '', window.location.pathname);
+              }
+            }}
+            onProductCreated={() => {
+              refreshCatalog();
+              showToast('¡Nueva prenda publicada con éxito!');
+            }}
+            onRefreshCatalog={refreshCatalog}
+          />
+        )}
+      </Suspense>
 
     </div>
   );

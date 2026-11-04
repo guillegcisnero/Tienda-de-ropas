@@ -8,12 +8,20 @@
 
 ---
 
-## 2. Pila Tecnológica & Arquitectura
+## 2. Pila Tecnológica & Arquitectura Modular
 - **Framework:** React 19 + TypeScript.
-- **Bundler:** Vite 8.
-- **Estilizado & UI:** Tailwind CSS v4 + Lucide React + Motion.
-- **Persistencia de Carrito:** `localStorage` (sin base de datos backend pesada; autonomía total).
-- **Checkout:** Integración directa mediante URL `https://wa.me/<NUMERO>?text=<PEDIDO_ENCODED>`.
+- **Bundler:** Vite 8 (con Code Splitting automático y dynamic imports vía `React.lazy`).
+- **Estilizado & UI:** Tailwind CSS v4 + Lucide React.
+- **Gestión de Estado (Custom Hooks):**
+  - `src/hooks/useCart.ts`: Persistencia en `localStorage`, control de prenda única 1/1 y cálculo de totales.
+  - `src/hooks/useCatalogFilters.ts`: Deducción dinámica de talles, orden y búsqueda con debounce.
+  - `src/hooks/useDebounce.ts`: Prevención de cuellos de botella en inputs de búsqueda.
+- **Servicios:**
+  - `src/services/whatsapp.ts`: Sanitización y ensamblado de mensaje para `wa.me`.
+  - `src/services/payment.ts`: Cliente de integración de preferencias para Mercado Pago.
+- **Utilidades:**
+  - `src/utils/formatters.ts`: Formateador singleton de precios (`Intl.NumberFormat`).
+- **Modales & Drawers:** Carga perezosa (lazy-loaded chunks) para garantizar primera pintura FCP ultra veloz.
 
 ---
 

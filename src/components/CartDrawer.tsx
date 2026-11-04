@@ -2,6 +2,7 @@ import React from 'react';
 import { X, Trash2, ShoppingBag, Truck, ArrowRight } from 'lucide-react';
 import { Product, ShippingConfig } from '../types';
 import { SHIPPING_RATES } from '../data/mockCatalog';
+import { formatPrice } from '../utils/formatters';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -28,10 +29,6 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
   const subtotal = cart.reduce((sum, item) => sum + item.price, 0);
   const total = subtotal + shipping.cost;
-
-  const formatPrice = (val: number) => {
-    return '$' + val.toLocaleString('es-AR');
-  };
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm animate-fadeIn">
@@ -171,7 +168,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               }}
               className="w-full py-3.5 px-6 rounded-xl bg-[#EA8A8A] hover:bg-[#e37575] active:scale-[0.98] text-[#2c221e] font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
-              <span>Continuar al Pago</span>
+              <span>Iniciar Compra</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>

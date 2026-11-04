@@ -1,6 +1,7 @@
 import React from 'react';
-import { X, Ruler, ShoppingBag, Check, ShieldCheck, Sparkles } from 'lucide-react';
+import { X, Ruler, ShoppingBag, Check, ShieldCheck, ArrowRight } from 'lucide-react';
 import { Product } from '../types';
+import { formatPrice } from '../utils/formatters';
 
 interface ProductDetailModalProps {
   product: Product | null;
@@ -8,6 +9,7 @@ interface ProductDetailModalProps {
   isInCart: boolean;
   onClose: () => void;
   onAddToCart: (product: Product) => void;
+  onBuyNow?: (product: Product) => void;
   onOpenGuide: () => void;
 }
 
@@ -17,13 +19,10 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   isInCart,
   onClose,
   onAddToCart,
+  onBuyNow,
   onOpenGuide
 }) => {
   if (!isOpen || !product) return null;
-
-  const formatPrice = (val: number) => {
-    return '$' + val.toLocaleString('es-AR');
-  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
@@ -115,7 +114,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             </div>
           </div>
 
-          {/* Action Button */}
+          {/* Action Buttons: Agregar al Carrito & Iniciar Compra */}
           <div className="mt-6 pt-4 border-t border-[#DEC0C0]">
             {isInCart ? (
               <button
@@ -126,16 +125,28 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 <span>Esta prenda única ya está en tu carrito</span>
               </button>
             ) : (
-              <button
-                onClick={() => {
-                  onAddToCart(product);
-                  onClose();
-                }}
-                className="w-full py-3.5 px-6 rounded-xl bg-[#EA8A8A] hover:bg-[#e37575] active:scale-[0.98] text-[#2c221e] font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <ShoppingBag className="w-4 h-4" />
-                <span>Agregar Prenda Única al Carrito</span>
-              </button>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button
+                  onClick={() => {
+                    onAddToCart(product);
+                  }}
+                  className="w-full py-3.5 px-4 rounded-xl border-2 border-[#68544d] hover:bg-[#68544d]/10 text-[#68544d] font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                >
+                  <ShoppingBag className="w-4 h-4" />
+                  <span>Agregar al Carrito</span>
+                </button>
+                <button
+                  onClick={() => {
+                    onAddToCart(product);
+                    onClose();
+                    onBuyNow?.(product);
+                  }}
+                  className="w-full py-3.5 px-4 rounded-xl bg-[#EA8A8A] hover:bg-[#e37575] active:scale-[0.98] text-[#2c221e] font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <ArrowRight className="w-4 h-4" />
+                  <span>Iniciar Compra</span>
+                </button>
+              </div>
             )}
           </div>
         </div>

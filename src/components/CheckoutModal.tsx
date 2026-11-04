@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
-import { X, CreditCard, MessageCircle, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { X, CreditCard, MessageCircle, ShieldCheck } from 'lucide-react';
 import { Product, ShippingConfig, BuyerInfo } from '../types';
+import { formatPrice } from '../utils/formatters';
+import { buildWhatsAppOrderUrl } from '../services/whatsapp';
+import { createPaymentPreference } from '../services/payment';
+import { reserveProductsForCheckout } from '../services/catalogService';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -35,10 +39,6 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const subtotal = cart.reduce((sum, item) => sum + item.price, 0);
   const total = subtotal + shipping.cost;
 
-  const formatPrice = (val: number) => {
-    return '$' + val.toLocaleString('es-AR');
-  };
-
   const handlePayWithMercadoPago = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!buyer.name || !buyer.phone || !buyer.email) {
@@ -49,59 +49,45 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     setIsProcessingMp(true);
 
     try {
-      // Intenta conectar al endpoint serverless
-      const response = await fetch('/api/create-preference', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          items: cart.map(i => ({
-            id: i.id,
-            title: `${i.name} (${i.size})`,
-            unit_price: i.price,
-            quantity: 1
-          })),
-          shippingCost: shipping.cost,
-          payer: buyer
-        })
-      });
+      // 1. Reserva atómica en Supabase (o simulada en local)
+      const reservation = await reserveProductsForCheckout(cart.map(i => i.id));
+      if (!reservation.success) {
+        alert('Una de las prendas seleccionadas acaba de ser reservada por otro comprador. Por favor revisá tu carrito.');
+        setIsProcessingMp(false);
+        return;
+      }
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.init_point) {
-          window.location.href = data.init_point;
-          return;
-        }
+      // 2. Creación de preferencia en pasarela
+      const result = await createPaymentPreference({ cart, shipping, buyer });
+
+      if (result.initPoint) {
+        window.location.href = result.initPoint;
+        return;
       }
       
-      // Modo Mock / Fallback guiado si aún no están las API keys de MP en producción
+      // Modo Simulado o Fallback estructurado
       alert('¡Listo! Te redirigimos al entorno seguro de cobro de Mercado Pago.');
       onSuccessOrder();
       onClose();
     } catch (err) {
-      console.warn('Fallback de checkout Mercado Pago:', err);
-      // Fallback amigable a WhatsApp
+      console.warn('Fallback de checkout Mercado Pago hacia WhatsApp:', err);
       handlePayWithWhatsApp();
     } finally {
       setIsProcessingMp(false);
     }
   };
 
-  const handlePayWithWhatsApp = () => {
-    const itemsList = cart.map((i, idx) => `👗 ${idx + 1}. *${i.name}* (${i.size}) - ${formatPrice(i.price)}`).join('\n');
-    const msg = 
-      `🌿 *¡Hola Aura Pre-Loved! Quiero comprar estas prendas únicas:*\n\n` +
-      `${itemsList}\n\n` +
-      `📦 *Envío:* ${shipping.service} (${shipping.cost === 0 ? 'Gratis' : formatPrice(shipping.cost)})\n` +
-      `💰 *Total a abonar:* ${formatPrice(total)}\n\n` +
-      `👤 *Mis Datos para el Envío:*\n` +
-      `• Nombre: ${buyer.name || 'A coordinar'}\n` +
-      `• Teléfono: ${buyer.phone || 'A coordinar'}\n` +
-      `• Dirección: ${buyer.address || 'A coordinar'} (CP: ${buyer.postalCode || '-'})\n` +
-      `• Provincia: ${buyer.province || shipping.province}\n\n` +
-      `¿Me pasás el alias / CBU o link de pago para transferirte y reservarlas ya?`;
+  const handlePayWithWhatsApp = async () => {
+    // Reserva atómica de cortesía para transferencia
+    await reserveProductsForCheckout(cart.map(i => i.id));
 
-    const cleanPhone = whatsappNumber.replace(/\D/g, '');
-    const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`;
+    const url = buildWhatsAppOrderUrl({
+      cart,
+      shipping,
+      total,
+      buyer,
+      whatsappNumber
+    });
     window.open(url, '_blank');
     onSuccessOrder();
     onClose();
@@ -143,6 +129,12 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             <span>Total Final</span>
             <span className="tabular-nums">{formatPrice(total)}</span>
           </div>
+        </div>
+
+        {/* Reservation Guarantee Badge */}
+        <div className="bg-[#68544d]/10 border border-[#DEC0C0] rounded-xl px-3.5 py-2 mb-5 flex items-center gap-2 text-[11px] text-[#5c4b45]">
+          <span className="inline-block w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
+          <span><strong>Reserva garantizada:</strong> Al avanzar bloqueamos tus prendas por 10 minutos para que nadie más las compre.</span>
         </div>
 
         {/* Buyer Form */}

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Sparkles, ArrowDown, Ruler, CheckCircle2, Truck, ShieldCheck } from 'lucide-react';
 
 interface HeroProps {
@@ -6,7 +6,7 @@ interface HeroProps {
   onExplore: () => void;
 }
 
-export const Hero: React.FC<HeroProps> = ({ onOpenGuide, onExplore }) => {
+export const Hero = memo<HeroProps>(({ onOpenGuide, onExplore }) => {
   return (
     <section className="relative overflow-hidden py-14 sm:py-20 border-b border-white/10 bg-gradient-to-b from-[#68544d] via-[#68544d] to-[#55443e]">
       {/* Decorative Orbs */}
@@ -63,4 +63,6 @@ export const Hero: React.FC<HeroProps> = ({ onOpenGuide, onExplore }) => {
       </div>
     </section>
   );
-};
+});
+
+Hero.displayName = 'Hero';

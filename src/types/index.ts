@@ -12,8 +12,9 @@ export interface Measurements {
 export interface Product {
   id: string;
   name: string;
-  category: 'Urbana' | 'Infantil' | string;
+  category: 'adultos' | 'ninos' | 'Urbana' | 'Infantil' | string;
   subCategory?: string;
+  gender?: 'mujer' | 'hombre' | 'nena' | 'nene' | 'unisex' | string;
   condition: string;
   size: string;
   measurements: Measurements;
@@ -54,6 +55,7 @@ export interface BuyerInfo {
 
 export interface FilterState {
   category: string;
+  gender: string;
   size: string;
   condition: string;
   search: string;

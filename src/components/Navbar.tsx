@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { ShoppingBag, Search, X } from 'lucide-react';
 
 interface NavbarProps {
@@ -9,7 +9,7 @@ interface NavbarProps {
   onSearchChange: (val: string) => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({
+export const Navbar = memo<NavbarProps>(({
   storeName,
   cartCount,
   onOpenCart,
@@ -106,4 +106,6 @@ export const Navbar: React.FC<NavbarProps> = ({
       </header>
     </>
   );
-};
+});
+
+Navbar.displayName = 'Navbar';

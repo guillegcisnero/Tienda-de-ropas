@@ -1,12 +1,13 @@
-import React from 'react';
-import { Sparkles, Heart, ShieldCheck, RefreshCw, Truck } from 'lucide-react';
+import React, { memo } from 'react';
+import { Heart, ShieldCheck, RefreshCw, Truck } from 'lucide-react';
 
 interface FooterProps {
   storeName: string;
   tagline: string;
+  onOpenAdmin?: () => void;
 }
 
-export const Footer: React.FC<FooterProps> = ({ storeName, tagline }) => {
+export const Footer = memo<FooterProps>(({ storeName, tagline, onOpenAdmin }) => {
   return (
     <footer className="bg-[#55443e] border-t border-white/10 text-[#FAF6F0] py-12 mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -50,6 +51,13 @@ export const Footer: React.FC<FooterProps> = ({ storeName, tagline }) => {
             <span className="font-serif font-bold text-white text-base">{storeName}</span>
             <span>·</span>
             <span>{tagline}</span>
+            <span>·</span>
+            <button
+              onClick={onOpenAdmin}
+              className="text-[#EBD5D5]/50 hover:text-[#EA8A8A] transition-colors cursor-pointer underline text-[11px]"
+            >
+              Acceso Admin
+            </button>
           </div>
           <div className="flex items-center gap-1">
             <span>Diseñado con pasión por la moda circular</span>
@@ -60,4 +68,6 @@ export const Footer: React.FC<FooterProps> = ({ storeName, tagline }) => {
       </div>
     </footer>
   );
-};
+});
+
+Footer.displayName = 'Footer';

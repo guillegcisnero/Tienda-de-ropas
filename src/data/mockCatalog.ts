@@ -20,8 +20,9 @@ export const MOCK_CATALOG: Product[] = [
   {
     id: "prod-001",
     name: "Campera Denim Vintage 90s",
-    category: "Urbana",
+    category: "adultos",
     subCategory: "Camperas",
+    gender: "unisex",
     condition: "9/10 (Excelente)",
     size: "Oversize M",
     measurements: {
@@ -41,8 +42,9 @@ export const MOCK_CATALOG: Product[] = [
   {
     id: "prod-002",
     name: "Enterito Jardinero Corduroy Mostaza",
-    category: "Infantil",
+    category: "ninos",
     subCategory: "Bebés & Niños",
+    gender: "unisex",
     condition: "10/10 (Sin uso con etiqueta)",
     size: "Talle 2 (24 Meses)",
     measurements: {
@@ -62,8 +64,9 @@ export const MOCK_CATALOG: Product[] = [
   {
     id: "prod-003",
     name: "Buzo Hoodie Oversize Washed Lilac",
-    category: "Urbana",
+    category: "adultos",
     subCategory: "Buzos & Hoodies",
+    gender: "unisex",
     condition: "9/10 (Excelente)",
     size: "Talle L",
     measurements: {
@@ -83,8 +86,9 @@ export const MOCK_CATALOG: Product[] = [
   {
     id: "prod-004",
     name: "Vestidito Broderie Algodón Orgánico",
-    category: "Infantil",
+    category: "ninos",
     subCategory: "Niñas",
+    gender: "nena",
     condition: "9/10 (Excelente)",
     size: "Talle 4",
     measurements: {
@@ -103,8 +107,9 @@ export const MOCK_CATALOG: Product[] = [
   {
     id: "prod-005",
     name: "Pantalón Cargo Streetwear Khaki",
-    category: "Urbana",
+    category: "adultos",
     subCategory: "Pantalones",
+    gender: "hombre",
     condition: "8/10 (Muy bueno)",
     size: "Talle 40 (M)",
     measurements: {
@@ -124,8 +129,9 @@ export const MOCK_CATALOG: Product[] = [
   {
     id: "prod-006",
     name: "Campera Rompevientos Colorblock Retro",
-    category: "Infantil",
+    category: "ninos",
     subCategory: "Niños & Niñas",
+    gender: "nene",
     condition: "9/10 (Excelente)",
     size: "Talle 6",
     measurements: {
@@ -144,8 +150,9 @@ export const MOCK_CATALOG: Product[] = [
   {
     id: "prod-007",
     name: "Tapado Paño Tweed Camel Vintage",
-    category: "Urbana",
+    category: "adultos",
     subCategory: "Abrigos",
+    gender: "mujer",
     condition: "10/10 (Como nuevo)",
     size: "Talle L",
     measurements: {
@@ -165,8 +172,9 @@ export const MOCK_CATALOG: Product[] = [
   {
     id: "prod-008",
     name: "Suéter Tejido Jacquard Nórdico",
-    category: "Infantil",
+    category: "ninos",
     subCategory: "Tejidos",
+    gender: "unisex",
     condition: "10/10 (Como nuevo)",
     size: "Talle 8",
     measurements: {
@@ -185,8 +193,9 @@ export const MOCK_CATALOG: Product[] = [
   {
     id: "prod-009",
     name: "Remera Boxy Fit Gráfica Indie",
-    category: "Urbana",
+    category: "adultos",
     subCategory: "Remeras",
+    gender: "hombre",
     condition: "9/10 (Excelente)",
     size: "Talle XL",
     measurements: {
@@ -205,8 +214,9 @@ export const MOCK_CATALOG: Product[] = [
   {
     id: "prod-010",
     name: "Salopette Denim Algodón Soft",
-    category: "Infantil",
+    category: "ninos",
     subCategory: "Bebés",
+    gender: "unisex",
     condition: "10/10 (Como nuevo)",
     size: "Talle 12-18M",
     measurements: {
