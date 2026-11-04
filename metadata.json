@@ -1,5 +1,5 @@
 {
-  "name": "Aura Pre-Loved - Tienda de Ropa Sustentable",
+  "name": "Aura Loved - Tienda de Ropa Sustentable",
   "description": "Tienda e-commerce de indumentaria infantil y moda urbana pre-loved (prendas únicas), con medidas exactas en centímetros, cotizador de envíos a toda Argentina y checkout dual.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
