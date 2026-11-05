@@ -43,6 +43,14 @@ export const FiltersBar = memo<FiltersBarProps>(({
         { id: 'unisex', label: 'Unisex' }
       ];
     }
+    if (filters.category === 'accesorios') {
+      return [
+        { id: 'all', label: 'Todos' },
+        { id: 'unisex', label: 'Unisex' },
+        { id: 'mujer', label: 'Mujer' },
+        { id: 'hombre', label: 'Hombre' }
+      ];
+    }
     return [
       { id: 'all', label: 'Todos los sexos' },
       { id: 'mujer', label: 'Mujer / Nena' },
@@ -61,7 +69,8 @@ export const FiltersBar = memo<FiltersBarProps>(({
             {[
               { id: 'all', label: 'Todas las prendas' },
               { id: 'adultos', label: 'Ropa para adultos' },
-              { id: 'ninos', label: 'Ropa para niños' }
+              { id: 'ninos', label: 'Ropa para niños' },
+              { id: 'accesorios', label: 'Accesorios & Otros' }
             ].map(cat => (
               <button
                 key={cat.id}

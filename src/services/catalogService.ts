@@ -9,6 +9,7 @@ export interface DatabaseProductRow {
   description: string;
   category: string;
   sub_category?: string;
+  gender?: string;
   brand?: string;
   size: string;
   measurements: Record<string, string>;
@@ -29,6 +30,7 @@ export function mapRowToProduct(row: DatabaseProductRow): Product {
     name: row.title,
     category: row.category,
     subCategory: row.sub_category,
+    gender: row.gender,
     condition: row.condition,
     size: row.size,
     measurements: row.measurements || {},
@@ -134,6 +136,7 @@ export async function createProduct(productData: Omit<Product, 'id'>): Promise<P
       description: productData.description,
       category: productData.category,
       sub_category: productData.subCategory,
+      gender: productData.gender,
       size: productData.size,
       measurements: productData.measurements,
       condition: productData.condition,

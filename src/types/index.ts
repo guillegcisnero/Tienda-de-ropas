@@ -12,7 +12,7 @@ export interface Measurements {
 export interface Product {
   id: string;
   name: string;
-  category: 'adultos' | 'ninos' | 'Urbana' | 'Infantil' | string;
+  category: 'adultos' | 'ninos' | 'accesorios' | 'Urbana' | 'Infantil' | string;
   subCategory?: string;
   gender?: 'mujer' | 'hombre' | 'nena' | 'nene' | 'unisex' | string;
   condition: string;

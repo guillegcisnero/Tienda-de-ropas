@@ -36,7 +36,9 @@ export function useCatalogFilters(products: Product[]) {
           if (cat !== 'adultos' && cat !== 'urbana') return false;
         } else if (filters.category === 'ninos') {
           if (cat !== 'ninos' && cat !== 'infantil') return false;
-        } else if (p.category !== filters.category) {
+        } else if (filters.category === 'accesorios') {
+          if (cat !== 'accesorios' && cat !== 'accesorio') return false;
+        } else if (cat !== filters.category) {
           return false;
         }
       }
