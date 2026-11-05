@@ -156,6 +156,54 @@ export async function createProduct(productData: Omit<Product, 'id'>): Promise<P
 }
 
 /**
+ * Actualiza los datos completos de una prenda existente en el catálogo.
+ */
+export async function updateProduct(
+  productId: string, 
+  productData: Partial<Product>
+): Promise<Product> {
+  const updatedProduct: Partial<Product> = {
+    ...productData,
+    id: productId,
+  };
+
+  if (!isSupabaseConfigured || !supabase) {
+    return updatedProduct as Product;
+  }
+
+  const payload: Record<string, any> = {
+    updated_at: new Date().toISOString()
+  };
+
+  if (productData.name !== undefined) payload.title = productData.name;
+  if (productData.description !== undefined) payload.description = productData.description;
+  if (productData.category !== undefined) payload.category = productData.category;
+  if (productData.subCategory !== undefined) payload.sub_category = productData.subCategory;
+  if (productData.gender !== undefined) payload.gender = productData.gender;
+  if (productData.size !== undefined) payload.size = productData.size;
+  if (productData.measurements !== undefined) payload.measurements = productData.measurements;
+  if (productData.condition !== undefined) payload.condition = productData.condition;
+  if (productData.price !== undefined) payload.price = productData.price;
+  if (productData.image !== undefined) payload.images = [productData.image];
+  if (productData.available !== undefined) {
+    payload.status = productData.available ? 'available' : 'sold';
+    if (productData.available) payload.reserved_until = null;
+  }
+
+  const { error } = await supabase
+    .from('products')
+    .update(payload)
+    .eq('id', productId);
+
+  if (error) {
+    console.error(`[CatalogService] Error al actualizar prenda ${productId} en Supabase:`, error);
+    throw new Error(error.message);
+  }
+
+  return updatedProduct as Product;
+}
+
+/**
  * Actualiza el estado de una prenda ('available', 'reserved', 'sold')
  */
 export async function updateProductStatus(

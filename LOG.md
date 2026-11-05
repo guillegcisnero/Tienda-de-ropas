@@ -56,17 +56,32 @@ Este documento registra cronológicamente los hitos, refactorizaciones y avances
 
 ---
 
-### [2026-11-04 19:56] — Fase 2 Plan Producción: Checkout Seguro, Reserva Atómica & Webhooks MP
-- **Motor de Reserva Atómica en Checkout:**
-  - Creado `reserveProductsForCheckout` en `src/services/catalogService.ts`: Invoca el RPC `reserve_product_for_checkout` (10 minutos) con fallback tolerante en modo local.
-  - Conectado a `src/components/CheckoutModal.tsx`: Verificación previa a la redirección de pago. Si otra persona reservó la prenda única, el usuario es notificado de inmediato.
-  - Añadido badge de garantía de reserva en el formulario del modal de checkout.
-- **Serverless API Routes & Webhook IPN de Mercado Pago:**
-  - Actualizado `api/create-preference.ts`: Incluye `external_reference` con los IDs de las prendas y `notification_url` para sincronización de webhooks.
-  - Actualizado `api/webhook.ts`: Verificación directa del pago en Mercado Pago y actualización atómica definitiva a estado `sold` en Supabase al confirmarse la compra.
-- **Validación:** Build exitoso en 1.02s y verificación TypeScript limpia (`tsc --noEmit` con 0 errores).
+### [2026-11-04 23:50] — Rediseño Integral del Panel Administrador (Inspirado en Dribbble 25837591)
+- **Fase 1: Infraestructura y Layout Base Modular:**
+  - `src/components/admin/types.ts`: Tipos estrictos (`AdminSection`, `AdminOrder`, `DashboardStats`).
+  - `src/components/admin/AdminSidebar.tsx`: Fondo Cocoa Dark (`#443530`), active pill en Cherry Accent (`#EA8A8A`), contador en vivo y botón de regreso a tienda.
+  - `src/components/admin/AdminHeader.tsx`: Saludo horario dinámico, barra de búsqueda unificada, sync button, CTA de nueva prenda y avatar.
+  - `src/components/admin/AdminLayout.tsx`: Orquestación responsiva (Sidebar lateral en desktop, slide-over drawer para mobile y bottom navigation bar con touch targets >= 44px).
+- **Fase 2: Vista Dashboard Overview & Analítica SVG:**
+  - `src/components/admin/components/StatCard.tsx`: Métricas ejecutivas (Ingresos, Catálogo, Pedidos, Ticket promedio) con sub-métricas (Hoy vs Mes) y variación %.
+  - `src/components/admin/components/SalesTrendsChart.tsx`: Gráfico SVG nativo ultraligero con curvas spline Bézier en Cherry e Ivory, tooltips interactivos y toggle ventas/pedidos.
+  - `src/components/admin/components/OrdersStatusDonut.tsx`: Donut chart SVG de distribución de inventario y pedidos.
+  - `src/components/admin/views/DashboardOverview.tsx`: Ensamblado integral de KPIs, analítica gráfica y pedidos recientes.
+- **Fase 3: Gestión de Inventario & Product Drawer:**
+  - `src/components/admin/components/ProductDrawer.tsx`: Drawer lateral deslizable (Desktop 420-460px) y Bottom Sheet táctil (Mobile), con live preview de prenda, medidas en cm (sisa, largo, etc.), selector de condición vintage y soporte para Alta y Edición completa.
+  - `src/components/admin/views/InventoryView.tsx`: Tabla estilizada con tarjetas de métricas de catálogo, filtros por categoría y disponibilidad, y toggle Live de estado.
+  - `src/services/catalogService.ts`: Incorporación de `updateProduct()` para actualización de datos y persistencia en Supabase / local.
+- **Fase 4: Pedidos Omnicanal & Configuración:**
+  - `src/components/admin/views/OrdersView.tsx`: Listado omnicanal con filtros de pasarela (WhatsApp vs Mercado Pago), modal de detalle de compra, copia de etiquetas de logística y mensajes dinámicos `wa.me/` según estado.
+  - `src/components/admin/views/SettingsView.tsx`: Edición reactiva y guardado en `localStorage` de parámetros de tienda, tarifas de envío, actualización de PIN administrativo y test de conexión con Supabase.
+- **Fase 5: Optimización de Rendimiento, Seguridad y Validación:**
+  - Protección con PIN configurable (`aura2026` / `admin` o PIN customizado).
+  - Touch targets auditados y ajustados a >= 44px en toda la interfaz móvil.
+  - Lazy loading respetado: `AdminDashboard` empaquetado en chunk independiente (`AdminDashboard-*.js` ~20 kB gzip), manteniendo el storefront en <0.8s.
+  - Build de producción Vite completado exitosamente con 0 errores en 1.17s.
 
 ---
+
 
 ### [2026-11-04 19:59] — Fase 4 Plan Producción: Backoffice Móvil-First & Carga Express
 - **Módulo Administrativo Lazy-Loaded (`AdminDashboard.tsx`):**
