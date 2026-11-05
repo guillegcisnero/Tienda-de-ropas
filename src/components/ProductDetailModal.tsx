@@ -1,5 +1,5 @@
-import React from 'react';
-import { X, Ruler, ShoppingBag, Check, ShieldCheck, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Ruler, ShoppingBag, Check, ShieldCheck, ArrowRight, ZoomIn, ZoomOut, Move } from 'lucide-react';
 import { Product } from '../types';
 import { formatPrice } from '../utils/formatters';
 
@@ -22,6 +22,45 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   onBuyNow,
   onOpenGuide
 }) => {
+  const [isZoomed, setIsZoomed] = useState(false);
+  const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 });
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setIsZoomed(false);
+    setZoomPos({ x: 50, y: 50 });
+  }, [product?.id, isOpen]);
+
+  const updateCoordinates = (clientX: number, clientY: number) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+    const x = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
+    const y = Math.max(0, Math.min(100, ((clientY - rect.top) / rect.height) * 100));
+    setZoomPos({ x, y });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    updateCoordinates(e.clientX, e.clientY);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length > 0) {
+      updateCoordinates(e.touches[0].clientX, e.touches[0].clientY);
+    }
+  };
+
+  const handleContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if ((e.target as HTMLElement).closest('button')) return;
+
+    if (!isZoomed) {
+      updateCoordinates(e.clientX, e.clientY);
+      setIsZoomed(true);
+    } else {
+      setIsZoomed(false);
+    }
+  };
+
   if (!isOpen || !product) return null;
 
   return (
@@ -40,14 +79,63 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
           <X className="w-5 h-5" />
         </button>
 
-        {/* Product Image Section */}
-        <div className="md:w-1/2 relative bg-[#55443e]/10 min-h-[260px] md:min-h-full">
+        {/* Product Image Section with Interactive Dynamic Zoom */}
+        <div 
+          ref={containerRef}
+          onClick={handleContainerClick}
+          onMouseMove={handleMouseMove}
+          onTouchMove={handleTouchMove}
+          className={`md:w-1/2 relative min-h-[300px] md:min-h-full flex items-center justify-center overflow-hidden transition-colors duration-300 select-none bg-[#3b2f2b]/10 ${
+            isZoomed ? 'cursor-crosshair' : 'cursor-zoom-in'
+          }`}
+          title={isZoomed ? 'Hacé clic para ver la prenda completa' : 'Hacé clic para hacer zoom y recorrer la prenda'}
+        >
           <img 
             src={product.image} 
             alt={product.name} 
-            className="w-full h-full object-cover"
+            draggable={false}
+            style={{
+              transformOrigin: `${zoomPos.x}% ${zoomPos.y}%`,
+              transform: isZoomed ? 'scale(2.4)' : 'scale(1)',
+            }}
+            className="w-full h-full object-contain max-h-[60vh] md:max-h-[75vh] p-2 transition-transform duration-300 ease-out select-none pointer-events-none"
           />
-          <div className="absolute top-4 left-4 flex flex-col gap-1.5">
+
+          {/* Pill when zoomed indicating you can move around */}
+          {isZoomed && (
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 pointer-events-none animate-fadeIn">
+              <span className="bg-black/75 backdrop-blur-md text-white text-[11px] font-medium px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 border border-white/20 whitespace-nowrap">
+                <Move className="w-3.5 h-3.5 text-[#EA8A8A]" />
+                <span>Mové el cursor para explorar</span>
+              </span>
+            </div>
+          )}
+
+          {/* Zoom Toggle Floating Button */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsZoomed(prev => !prev);
+            }}
+            className="absolute bottom-4 right-4 z-10 py-1.5 px-3 rounded-full bg-black/70 hover:bg-black/85 text-white text-xs font-semibold backdrop-blur-md transition-all flex items-center gap-1.5 shadow-lg cursor-pointer border border-white/20 active:scale-95"
+            title={isZoomed ? 'Ver prenda completa' : 'Activar zoom dinámico'}
+          >
+            {isZoomed ? (
+              <>
+                <ZoomOut className="w-3.5 h-3.5 text-[#EA8A8A]" />
+                <span>Prenda Completa</span>
+              </>
+            ) : (
+              <>
+                <ZoomIn className="w-3.5 h-3.5 text-[#EA8A8A]" />
+                <span>Zoom Dinámico</span>
+              </>
+            )}
+          </button>
+
+          {/* Badges */}
+          <div className={`absolute top-4 left-4 flex flex-col gap-1.5 pointer-events-none transition-opacity duration-200 ${isZoomed ? 'opacity-30' : 'opacity-100'}`}>
             <span className="bg-[#55443e]/90 text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full shadow-md">
               Prenda Única 1/1
             </span>
@@ -98,12 +186,14 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               </div>
 
               <div className="grid grid-cols-2 gap-2 text-xs">
-                {Object.entries(product.measurements).map(([key, val]) => (
-                  <div key={key} className="flex items-center justify-between p-2 rounded-lg bg-white/70 border border-[#DEC0C0]/50">
-                    <span className="capitalize text-[#5c4b45] font-medium">{key}:</span>
-                    <span className="font-bold text-[#2c221e] tabular-nums">{val}</span>
-                  </div>
-                ))}
+                {Object.entries(product.measurements)
+                  .filter(([_, val]) => Boolean(val && val.trim()))
+                  .map(([key, val]) => (
+                    <div key={key} className="flex items-center justify-between p-2 rounded-lg bg-white/70 border border-[#DEC0C0]/50">
+                      <span className="capitalize text-[#5c4b45] font-medium">{key}:</span>
+                      <span className="font-bold text-[#2c221e] tabular-nums">{val}</span>
+                    </div>
+                  ))}
               </div>
             </div>
 

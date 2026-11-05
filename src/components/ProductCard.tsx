@@ -55,7 +55,7 @@ export const ProductCard = memo<ProductCardProps>(({
           className="absolute bottom-3 left-3 right-3 py-2.5 px-4 rounded-xl bg-white/95 text-[#2c221e] font-semibold text-xs shadow-lg flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0 cursor-pointer"
         >
           <Ruler className="w-3.5 h-3.5 text-[#EA8A8A]" />
-          <span>Ver Medidas en cm</span>
+          <span>Ver Medidas y Detalles</span>
         </button>
       </div>
 
@@ -77,31 +77,12 @@ export const ProductCard = memo<ProductCardProps>(({
           <p className="text-xs text-[#5c4b45] line-clamp-2 mt-1.5 leading-relaxed font-light">
             {product.description}
           </p>
-
-          {/* Quick Measurements Preview Pills */}
-          <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-[#DEC0C0]/50 text-[11px] text-[#5c4b45]">
-            {product.measurements.sisa && (
-              <span className="bg-[#EBD5D5]/60 px-2 py-0.5 rounded-md">
-                Sisa: <strong>{product.measurements.sisa}</strong>
-              </span>
-            )}
-            {product.measurements.largo && (
-              <span className="bg-[#EBD5D5]/60 px-2 py-0.5 rounded-md">
-                Largo: <strong>{product.measurements.largo}</strong>
-              </span>
-            )}
-            {product.measurements.cintura && (
-              <span className="bg-[#EBD5D5]/60 px-2 py-0.5 rounded-md">
-                Cintura: <strong>{product.measurements.cintura}</strong>
-              </span>
-            )}
-          </div>
         </div>
 
-        {/* Price & Action Button */}
-        <div className="mt-5 pt-3 border-t border-[#DEC0C0] flex items-center justify-between gap-3">
-          <div>
-            <span className="text-[10px] text-[#5c4b45] uppercase tracking-wider block font-medium">Precio Final</span>
+        {/* Price & Action Buttons */}
+        <div className="mt-4 pt-3 border-t border-[#DEC0C0] flex flex-col gap-2.5">
+          <div className="flex items-baseline justify-between">
+            <span className="text-[10px] text-[#5c4b45] uppercase tracking-wider font-semibold">Precio Final</span>
             <span className="font-serif text-xl sm:text-2xl font-bold text-[#68544d] tabular-nums">
               {formatPrice(product.price)}
             </span>
@@ -110,26 +91,27 @@ export const ProductCard = memo<ProductCardProps>(({
           {isInCart ? (
             <button
               disabled
-              className="py-2 px-3 rounded-xl bg-[#68544d]/20 text-[#5c4b45] text-xs font-bold flex items-center gap-1.5 cursor-not-allowed"
+              className="w-full py-2.5 px-3 rounded-xl bg-[#68544d]/20 text-[#5c4b45] text-xs font-bold flex items-center justify-center gap-1.5 cursor-not-allowed"
             >
               <Check className="w-4 h-4 text-emerald-700" />
               <span>En Carrito</span>
             </button>
           ) : (
-            <div className="flex items-center gap-1.5">
+            <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => onAddToCart(product)}
-                className="py-2 px-2.5 rounded-xl border border-[#68544d]/40 hover:bg-[#68544d]/10 text-[#68544d] text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                className="py-2.5 px-2 rounded-xl border border-[#68544d]/40 hover:bg-[#68544d]/10 active:scale-95 text-[#68544d] text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
                 title="Agregar al Carrito"
               >
-                <ShoppingBag className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Agregar</span>
+                <ShoppingBag className="w-3.5 h-3.5 shrink-0" />
+                <span>Agregar</span>
               </button>
               <button
                 onClick={() => onBuyNow ? onBuyNow(product) : onAddToCart(product)}
-                className="py-2 px-3 rounded-xl bg-[#EA8A8A] hover:bg-[#e37575] active:scale-95 text-[#2c221e] text-xs font-bold shadow-md transition-all flex items-center gap-1 cursor-pointer whitespace-nowrap"
+                className="py-2.5 px-2 rounded-xl bg-[#EA8A8A] hover:bg-[#e37575] active:scale-95 text-[#2c221e] text-xs font-bold shadow-md transition-all flex items-center justify-center gap-1 cursor-pointer"
+                title="Iniciar Compra Directa"
               >
-                <span>Iniciar Compra</span>
+                <span className="truncate">Iniciar Compra</span>
               </button>
             </div>
           )}
