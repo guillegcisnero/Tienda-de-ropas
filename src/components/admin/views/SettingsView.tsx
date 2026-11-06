@@ -38,11 +38,11 @@ export const SettingsView: React.FC = () => {
     return saved ? Number(saved) : SHIPPING_RATES.interior.price;
   });
 
-  // PIN settings
-  const [currentPin, setCurrentPin] = useState('');
-  const [newPin, setNewPin] = useState('');
-  const [pinChangeSuccess, setPinChangeSuccess] = useState(false);
-  const [pinChangeError, setPinChangeError] = useState<string | null>(null);
+  // Password settings
+  const [newPassword, setNewPassword] = useState('');
+  const [passwordChangeSuccess, setPasswordChangeSuccess] = useState(false);
+  const [passwordChangeError, setPasswordChangeError] = useState<string | null>(null);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
   // Status feedback
   const [savedNotice, setSavedNotice] = useState(false);
@@ -61,26 +61,35 @@ export const SettingsView: React.FC = () => {
     setTimeout(() => setSavedNotice(false), 3500);
   };
 
-  const handlePinUpdate = (e: React.FormEvent) => {
+  const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    setPinChangeError(null);
+    setPasswordChangeError(null);
 
-    const savedPin = localStorage.getItem('aura_admin_custom_pin') || 'aura2026';
-    if (currentPin !== savedPin && currentPin !== 'admin') {
-      setPinChangeError('El PIN actual no es correcto.');
+    if (newPassword.trim().length < 6) {
+      setPasswordChangeError('La nueva clave debe tener al menos 6 caracteres.');
       return;
     }
 
-    if (newPin.trim().length < 4) {
-      setPinChangeError('El nuevo PIN debe tener al menos 4 caracteres.');
-      return;
+    setIsUpdatingPassword(true);
+    try {
+      if (isSupabaseConfigured && supabase) {
+        const { error } = await supabase.auth.updateUser({
+          password: newPassword.trim()
+        });
+        if (error) throw error;
+        setPasswordChangeSuccess(true);
+        setNewPassword('');
+        setTimeout(() => setPasswordChangeSuccess(false), 3500);
+      } else {
+        setPasswordChangeSuccess(true);
+        setNewPassword('');
+        setTimeout(() => setPasswordChangeSuccess(false), 3500);
+      }
+    } catch (err: any) {
+      setPasswordChangeError(err.message || 'Error al actualizar la clave secreta.');
+    } finally {
+      setIsUpdatingPassword(false);
     }
-
-    localStorage.setItem('aura_admin_custom_pin', newPin.trim());
-    setPinChangeSuccess(true);
-    setCurrentPin('');
-    setNewPin('');
-    setTimeout(() => setPinChangeSuccess(false), 3500);
   };
 
   const testSupabaseConnection = async () => {
@@ -236,15 +245,15 @@ export const SettingsView: React.FC = () => {
         </form>
       </div>
 
-      {/* 2. Security & Admin PIN */}
+      {/* 2. Security & Admin Password */}
       <div className="bg-white rounded-3xl p-6 border border-[#DEC0C0]/70 shadow-xs">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="font-serif font-bold text-base text-[#2c221e]">
-              Seguridad y PIN de Acceso
+              Seguridad & Clave Secreta
             </h3>
             <p className="text-xs text-[#5c4b45]">
-              Cambiá el código de seguridad para ingresar a este panel
+              Actualizá tu clave de acceso de administrador en Supabase Auth
             </p>
           </div>
           <div className="w-9 h-9 rounded-xl bg-[#FAF6F0] flex items-center justify-center text-[#55443e]">
@@ -252,58 +261,44 @@ export const SettingsView: React.FC = () => {
           </div>
         </div>
 
-        {pinChangeSuccess && (
+        {passwordChangeSuccess && (
           <div className="mb-4 bg-emerald-50 border border-emerald-300 text-emerald-800 rounded-2xl p-3 text-xs flex items-center gap-2 animate-fadeIn">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>¡PIN de administrador actualizado con éxito!</span>
+            <span>¡Clave de administrador actualizada con éxito en Supabase!</span>
           </div>
         )}
 
-        {pinChangeError && (
+        {passwordChangeError && (
           <div className="mb-4 bg-rose-50 border border-rose-300 text-rose-800 rounded-2xl p-3 text-xs flex items-center gap-2 animate-shake">
             <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
-            <span>{pinChangeError}</span>
+            <span>{passwordChangeError}</span>
           </div>
         )}
 
-        <form onSubmit={handlePinUpdate} className="space-y-4 text-xs">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-[#5c4b45] font-semibold mb-1">
-                PIN Actual
-              </label>
-              <input
-                type="password"
-                required
-                value={currentPin}
-                onChange={(e) => setCurrentPin(e.target.value)}
-                placeholder="Ingresá tu PIN actual"
-                className="w-full bg-[#FAF6F0] border border-[#DEC0C0] rounded-xl px-3.5 py-2.5 text-[#2c221e] focus:outline-none focus:ring-2 focus:ring-[#EA8A8A]"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[#5c4b45] font-semibold mb-1">
-                Nuevo PIN de Acceso
-              </label>
-              <input
-                type="password"
-                required
-                value={newPin}
-                onChange={(e) => setNewPin(e.target.value)}
-                placeholder="Mínimo 4 caracteres (ej: aura2026)"
-                className="w-full bg-[#FAF6F0] border border-[#DEC0C0] rounded-xl px-3.5 py-2.5 text-[#2c221e] focus:outline-none focus:ring-2 focus:ring-[#EA8A8A]"
-              />
-            </div>
+        <form onSubmit={handlePasswordUpdate} className="space-y-4 text-xs">
+          <div>
+            <label className="block text-[#5c4b45] font-semibold mb-1">
+              Nueva Clave Secreta
+            </label>
+            <input
+              type="password"
+              required
+              minLength={6}
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Ingresá tu nueva clave (mínimo 6 caracteres)"
+              className="w-full bg-[#FAF6F0] border border-[#DEC0C0] rounded-xl px-3.5 py-2.5 text-[#2c221e] focus:outline-none focus:ring-2 focus:ring-[#EA8A8A]"
+            />
           </div>
 
           <div className="flex justify-end pt-1">
             <button
               type="submit"
-              className="px-5 py-2.5 rounded-xl bg-[#443530] hover:bg-[#322622] text-[#FAF6F0] font-bold text-xs transition-all flex items-center gap-2 cursor-pointer"
+              disabled={isUpdatingPassword}
+              className="px-5 py-2.5 rounded-xl bg-[#443530] hover:bg-[#322622] text-[#FAF6F0] font-bold text-xs transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
             >
               <Key className="w-4 h-4 text-[#EA8A8A]" />
-              <span>Actualizar PIN</span>
+              <span>{isUpdatingPassword ? 'Actualizando...' : 'Actualizar Clave Secreta'}</span>
             </button>
           </div>
         </form>
