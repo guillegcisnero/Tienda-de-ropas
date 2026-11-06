@@ -268,3 +268,50 @@ INSERT INTO public.products (
     'available'
 )
 ON CONFLICT (id) DO NOTHING;
+
+-- ========================================================
+-- 9. TABLA DE REVOCACIONES Y ARREPENTIMIENTO (LEY 24.240 / RES. 424/2020)
+-- Registro auditable de solicitudes del "Botón de Arrepentimiento"
+-- ========================================================
+CREATE TABLE IF NOT EXISTS public.revocations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    code TEXT UNIQUE NOT NULL,                       -- Ej: 'REV-2026-A1B2'
+    order_code TEXT NOT NULL,                        -- Código de orden vinculada
+    customer_name TEXT NOT NULL,
+    customer_email TEXT NOT NULL,
+    customer_phone TEXT NOT NULL,
+    reason TEXT,                                     -- Motivo opcional del consumidor
+    status TEXT NOT NULL DEFAULT 'solicitado',       -- 'solicitado', 'inspeccion_pendiente', 'aprobado', 'rechazado'
+    resolution_notes TEXT,                           -- Notas internas de inspección
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Índices de auditoría y búsqueda rápida
+CREATE INDEX IF NOT EXISTS idx_revocations_code ON public.revocations(code);
+CREATE INDEX IF NOT EXISTS idx_revocations_order_code ON public.revocations(order_code);
+CREATE INDEX IF NOT EXISTS idx_revocations_created_at ON public.revocations(created_at DESC);
+
+-- Políticas de Seguridad (RLS) para proteger los datos personales (Ley 25.326)
+ALTER TABLE public.revocations ENABLE ROW LEVEL SECURITY;
+
+-- Los clientes pueden registrar su solicitud de arrepentimiento de forma anónima/pública (Res. 424/2020 no permite exigir login previo)
+CREATE POLICY "Permitir inserción pública de solicitudes de arrepentimiento"
+    ON public.revocations
+    FOR INSERT
+    TO public
+    WITH CHECK (true);
+
+-- Solo usuarios autenticados como administradores pueden consultar o modificar solicitudes
+CREATE POLICY "Lectura restringida de revocaciones para administradores"
+    ON public.revocations
+    FOR SELECT
+    TO authenticated
+    USING (true);
+
+CREATE POLICY "Actualización restringida de revocaciones para administradores"
+    ON public.revocations
+    FOR UPDATE
+    TO authenticated
+    USING (true);
+

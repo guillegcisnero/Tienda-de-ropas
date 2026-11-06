@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Mail, Sparkles, ArrowRight, CheckCircle2, AlertCircle, Shield } from 'lucide-react';
+import { X, Mail, Sparkles, ArrowRight, Shield, CheckCircle2, AlertCircle } from 'lucide-react';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -22,10 +22,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim() || !email.includes('@')) {
-      setFeedback({ type: 'error', message: 'Ingresá un correo electrónico válido' });
-      return;
-    }
+    if (!email || !email.includes('@')) return;
 
     setLoading(true);
     setFeedback(null);
@@ -37,6 +34,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       setTimeout(() => {
         onClose();
         setFeedback(null);
+        setEmail('');
       }, 1800);
     } else {
       setFeedback({ type: 'error', message: result.message });
@@ -66,13 +64,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       onClick={onClose}
     >
       <div 
-        className="relative w-full max-w-md bg-white text-[#1A1A1A] rounded-3xl shadow-2xl border border-[#E8E6E1] overflow-hidden p-6 sm:p-8 animate-scaleUp"
+        className="relative w-full max-w-md bg-white dark:bg-[#181816] text-[#1A1A1A] dark:text-[#F5F5F0] rounded-3xl shadow-2xl border border-[#E8E6E1] dark:border-[#282826] overflow-hidden p-6 sm:p-8 animate-scaleUp transition-colors"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Botón Cerrar */}
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 w-8 h-8 rounded-full bg-[#FBFBF9] hover:bg-[#F2F1EC] text-[#1A1A1A] border border-[#E8E6E1] flex items-center justify-center transition-colors cursor-pointer"
+          className="absolute top-5 right-5 w-8 h-8 rounded-full bg-[#FBFBF9] dark:bg-[#222220] hover:bg-[#F2F1EC] dark:hover:bg-[#2A2A28] text-[#1A1A1A] dark:text-[#F5F5F0] border border-[#E8E6E1] dark:border-[#282826] flex items-center justify-center transition-colors cursor-pointer"
           aria-label="Cerrar modal de autenticación"
         >
           <X className="w-4 h-4" />
@@ -80,13 +78,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
         {/* Encabezado */}
         <div className="text-center mb-6">
-          <div className="w-12 h-12 rounded-2xl bg-[#FBFBF9] border border-[#C5A880]/30 text-[#8F7049] flex items-center justify-center mx-auto mb-3 shadow-xs">
+          <div className="w-12 h-12 rounded-2xl bg-[#FBFBF9] dark:bg-[#1E1E1C] border border-[#C5A880]/30 text-[#8F7049] dark:text-[#C5A880] flex items-center justify-center mx-auto mb-3 shadow-xs">
             <Sparkles className="w-6 h-6 text-[#C5A880]" />
           </div>
-          <h3 className="font-serif text-2xl font-bold text-[#1A1A1A]">
+          <h3 className="font-serif text-2xl font-bold text-[#1A1A1A] dark:text-[#F5F5F0]">
             Tu Espacio en ESVEN
           </h3>
-          <p className="text-xs text-[#5A5A5A] mt-1 font-light">
+          <p className="text-xs text-[#5A5A5A] dark:text-[#A8A69E] mt-1 font-light">
             Sincronizá tus prendas favoritas y tu carrito entre tu móvil y tu computadora.
           </p>
         </div>
@@ -96,14 +94,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <div 
             className={`p-3.5 rounded-2xl mb-5 text-xs flex items-center gap-2.5 animate-fadeIn ${
               feedback.type === 'success' 
-                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
-                : 'bg-rose-50 text-rose-800 border border-rose-200'
+                ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50' 
+                : 'bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-900/50'
             }`}
           >
             {feedback.type === 'success' ? (
-              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
             ) : (
-              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />
             )}
             <span>{feedback.message}</span>
           </div>
@@ -114,7 +112,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           type="button"
           onClick={handleGoogleClick}
           disabled={loading}
-          className="w-full py-3 px-4 rounded-xl border border-[#E8E6E1] bg-white hover:bg-[#FBFBF9] text-xs font-bold text-[#1A1A1A] transition-all flex items-center justify-center gap-3 shadow-xs cursor-pointer active:scale-[0.99]"
+          className="w-full py-3 px-4 rounded-xl border border-[#E8E6E1] dark:border-[#282826] bg-white dark:bg-[#1C1C1A] hover:bg-[#FBFBF9] dark:hover:bg-[#242422] text-xs font-bold text-[#1A1A1A] dark:text-[#F5F5F0] transition-all flex items-center justify-center gap-3 shadow-xs cursor-pointer active:scale-[0.99]"
         >
           <svg className="w-4 h-4" viewBox="0 0 24 24">
             <path
@@ -139,26 +137,26 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
         {/* Separador */}
         <div className="flex items-center my-4">
-          <div className="flex-1 border-t border-[#E8E6E1]"></div>
-          <span className="px-3 text-[11px] uppercase tracking-wider text-[#A0A0A0] font-medium">o con tu email</span>
-          <div className="flex-1 border-t border-[#E8E6E1]"></div>
+          <div className="flex-1 border-t border-[#E8E6E1] dark:border-[#282826]"></div>
+          <span className="px-3 text-[11px] uppercase tracking-wider text-[#A0A0A0] dark:text-[#7A7A7A] font-medium">o con tu email</span>
+          <div className="flex-1 border-t border-[#E8E6E1] dark:border-[#282826]"></div>
         </div>
 
         {/* Formulario Email / Magic Link */}
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-[#5A5A5A] mb-1.5">
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-[#5A5A5A] dark:text-[#A8A69E] mb-1.5">
               Correo Electrónico
             </label>
             <div className="relative">
-              <Mail className="w-4 h-4 text-[#7A7A7A] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Mail className="w-4 h-4 text-[#7A7A7A] dark:text-[#8E8B82] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="tu@email.com"
                 required
-                className="w-full pl-10 pr-4 py-2.5 bg-[#FBFBF9] border border-[#E8E6E1] rounded-xl text-xs text-[#1A1A1A] focus:outline-none focus:border-[#C5A880] focus:bg-white transition-all"
+                className="w-full pl-10 pr-4 py-2.5 bg-[#FBFBF9] dark:bg-[#121212] border border-[#E8E6E1] dark:border-[#282826] rounded-xl text-xs text-[#1A1A1A] dark:text-[#F5F5F0] focus:outline-none focus:border-[#C5A880] focus:bg-white dark:focus:bg-[#181816] transition-all"
               />
             </div>
           </div>
@@ -166,15 +164,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 px-4 rounded-xl bg-[#1A1A1A] hover:bg-black text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
+            className="w-full py-3 px-4 rounded-xl bg-[#1A1A1A] dark:bg-[#F5F5F0] hover:bg-black dark:hover:bg-white text-white dark:text-[#121212] font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
           >
             <span>{loading ? 'Accediendo...' : 'Acceder sin contraseña'}</span>
-            <ArrowRight className="w-4 h-4 text-[#C5A880]" />
+            <ArrowRight className="w-4 h-4 text-[#C5A880] dark:text-[#8F7049]" />
           </button>
         </form>
 
         {/* Nota de Seguridad */}
-        <div className="mt-5 pt-4 border-t border-[#EDEBE6] flex items-center justify-center gap-1.5 text-[10px] text-[#7A7A7A]">
+        <div className="mt-5 pt-4 border-t border-[#EDEBE6] dark:border-[#282826] flex items-center justify-center gap-1.5 text-[10px] text-[#7A7A7A] dark:text-[#8E8B82]">
           <Shield className="w-3.5 h-3.5 text-[#C5A880]" />
           <span>Sin contraseñas difíciles. Acceso seguro y privado.</span>
         </div>

@@ -3,9 +3,9 @@ import React from 'react';
 interface EsvenLogoProps {
   variant?: 'full' | 'horizontal' | 'symbol' | 'logotype';
   className?: string;
-  symbolColor?: string; // Color for the symbol paths (defaults to #1A1A1A)
+  symbolColor?: string; // Color for the symbol paths (defaults to currentColor)
   starStroke?: string;  // Color for the star accent (defaults to #C5A880 - Oro Champaña)
-  textColor?: string;   // Color for the letters (defaults to #1A1A1A)
+  textColor?: string;   // Color for the letters (defaults to currentColor)
   height?: number | string;
 }
 
@@ -14,14 +14,14 @@ interface EsvenLogoProps {
  * "ESVEN - Identidad y Logotipo" (Frame 10:8).
  * 
  * Incluye el Isotipo con curvas textiles, estrella con detalle Oro Champaña (#C5A880),
- * y la tipografía de marca ESVEN en Negro Suave (#1A1A1A).
+ * y la tipografía de marca ESVEN adaptativa a modo claro/oscuro.
  */
 export const EsvenLogo: React.FC<EsvenLogoProps> = ({
   variant = 'horizontal',
   className = '',
-  symbolColor = '#1A1A1A',
+  symbolColor = 'currentColor',
   starStroke = '#C5A880',
-  textColor = '#1A1A1A',
+  textColor = 'currentColor',
   height
 }) => {
   // Isotipo paths (Curvas + Estrella con destello Oro Champaña)
@@ -109,7 +109,7 @@ export const EsvenLogo: React.FC<EsvenLogoProps> = ({
 
   if (variant === 'symbol') {
     return (
-      <div className={`inline-flex items-center justify-center ${className}`}>
+      <div className={`inline-flex items-center justify-center text-[#1A1A1A] dark:text-[#F5F5F0] transition-colors ${className}`}>
         {renderSymbol('w-full h-full')}
       </div>
     );
@@ -117,7 +117,7 @@ export const EsvenLogo: React.FC<EsvenLogoProps> = ({
 
   if (variant === 'logotype') {
     return (
-      <div className={`inline-flex items-center ${className}`}>
+      <div className={`inline-flex items-center text-[#1A1A1A] dark:text-[#F5F5F0] transition-colors ${className}`}>
         {renderLogotype('w-full h-auto')}
       </div>
     );
@@ -125,7 +125,7 @@ export const EsvenLogo: React.FC<EsvenLogoProps> = ({
 
   if (variant === 'full') {
     return (
-      <div className={`inline-flex flex-col items-center gap-2 ${className}`}>
+      <div className={`inline-flex flex-col items-center gap-2 text-[#1A1A1A] dark:text-[#F5F5F0] transition-colors ${className}`}>
         {renderSymbol('w-16 h-18 sm:w-20 sm:h-22')}
         {renderLogotype('w-28 sm:w-36 h-auto')}
       </div>
@@ -134,14 +134,9 @@ export const EsvenLogo: React.FC<EsvenLogoProps> = ({
 
   // Horizontal variant (Ideal for Navbar & Header)
   return (
-    <div className={`inline-flex items-center gap-2.5 sm:gap-3 ${className}`}>
+    <div className={`inline-flex items-center gap-2.5 sm:gap-3 text-[#1A1A1A] dark:text-[#F5F5F0] transition-colors ${className}`}>
       {renderSymbol('w-8 h-9 sm:w-9 sm:h-10')}
-      <div className="flex flex-col">
-        {renderLogotype('w-24 sm:w-28 h-auto')}
-        <span className="text-[9px] sm:text-[10px] uppercase tracking-[0.22em] text-[#C5A880] font-medium font-sans mt-0.5 leading-none">
-          Lujo Silencioso
-        </span>
-      </div>
+      {renderLogotype('w-24 sm:w-28 h-auto')}
     </div>
   );
 };

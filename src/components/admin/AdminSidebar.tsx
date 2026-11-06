@@ -71,7 +71,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
               ESVEN
             </h1>
             <p className="text-[10px] font-sans text-[#C5A880] mt-1 uppercase tracking-widest font-semibold">
-              Lujo Silencioso
+              Panel de Control
             </p>
           </div>
         </div>

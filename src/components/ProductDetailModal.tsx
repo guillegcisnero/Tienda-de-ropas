@@ -127,7 +127,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
         onClick={onClose}
       >
         <div 
-          className="relative w-full max-w-4xl bg-white text-[#1A1A1A] rounded-3xl shadow-2xl border border-[#E8E6E1] overflow-hidden flex flex-col md:flex-row max-h-[92vh]"
+          className="relative w-full max-w-4xl bg-white dark:bg-[#181816] text-[#1A1A1A] dark:text-[#F5F5F0] rounded-3xl shadow-2xl border border-[#E8E6E1] dark:border-[#282826] overflow-hidden flex flex-col md:flex-row max-h-[92vh] transition-colors"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Botones de Cabecera (Cerrar y Favorito) */}
@@ -137,8 +137,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 onClick={() => onToggleFavorite(product)}
                 className={`w-9 h-9 rounded-full flex items-center justify-center transition-all cursor-pointer border shadow-xs ${
                   isFavorite 
-                    ? 'bg-rose-50 border-rose-200 text-rose-500 scale-105' 
-                    : 'bg-[#FBFBF9] hover:bg-[#F2F1EC] text-[#1A1A1A] border-[#E8E6E1]'
+                    ? 'bg-rose-50 dark:bg-rose-950/60 border-rose-200 dark:border-rose-900/60 text-rose-500 scale-105' 
+                    : 'bg-[#FBFBF9] dark:bg-[#222220] hover:bg-[#F2F1EC] dark:hover:bg-[#2A2A28] text-[#1A1A1A] dark:text-[#F5F5F0] border-[#E8E6E1] dark:border-[#282826]'
                 }`}
                 aria-label={isFavorite ? "Quitar de favoritos" : "Guardar en favoritos"}
                 title={isFavorite ? "Quitar de favoritos" : "Guardar en favoritos"}
@@ -149,7 +149,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
             <button 
               onClick={onClose}
-              className="w-9 h-9 rounded-full bg-[#FBFBF9] hover:bg-[#F2F1EC] text-[#1A1A1A] flex items-center justify-center transition-colors cursor-pointer border border-[#E8E6E1] shadow-xs"
+              className="w-9 h-9 rounded-full bg-[#FBFBF9] dark:bg-[#222220] hover:bg-[#F2F1EC] dark:hover:bg-[#2A2A28] text-[#1A1A1A] dark:text-[#F5F5F0] flex items-center justify-center transition-colors cursor-pointer border border-[#E8E6E1] dark:border-[#282826] shadow-xs"
               aria-label="Cerrar modal"
             >
               <X className="w-5 h-5" />
@@ -157,7 +157,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
           </div>
 
           {/* Columna Izquierda: Galería Multi-foto + Selector */}
-          <div className="md:w-1/2 flex flex-col bg-[#FBFBF9] border-b md:border-b-0 md:border-r border-[#E8E6E1]">
+          <div className="md:w-1/2 flex flex-col bg-[#FBFBF9] dark:bg-[#121212] border-b md:border-b-0 md:border-r border-[#E8E6E1] dark:border-[#282826]">
             {/* Contenedor Principal de la Imagen */}
             <div 
               ref={containerRef}
@@ -267,7 +267,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
             {/* Carrusel de Miniaturas (Thumbnails) */}
             {images.length > 1 && (
-              <div className="p-3 bg-white border-t border-[#E8E6E1] flex items-center gap-2 overflow-x-auto scrollbar-none">
+              <div className="p-3 bg-white dark:bg-[#181816] border-t border-[#E8E6E1] dark:border-[#282826] flex items-center gap-2 overflow-x-auto scrollbar-none">
                 {images.map((img, idx) => (
                   <button
                     key={idx}
@@ -278,8 +278,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                     }}
                     className={`relative w-14 h-14 rounded-xl overflow-hidden shrink-0 border-2 transition-all cursor-pointer ${
                       activeImageIndex === idx 
-                        ? 'border-[#1A1A1A] ring-2 ring-[#C5A880]/40 scale-105' 
-                        : 'border-[#E8E6E1] opacity-60 hover:opacity-100'
+                        ? 'border-[#1A1A1A] dark:border-[#F5F5F0] ring-2 ring-[#C5A880]/40 scale-105' 
+                        : 'border-[#E8E6E1] dark:border-[#282826] opacity-60 hover:opacity-100'
                     }`}
                   >
                     <img 
@@ -294,40 +294,40 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
           </div>
 
           {/* Columna Derecha: Detalles del Producto */}
-          <div className="md:w-1/2 p-6 md:p-8 flex flex-col justify-between overflow-y-auto bg-white">
+          <div className="md:w-1/2 p-6 md:p-8 flex flex-col justify-between overflow-y-auto bg-white dark:bg-[#181816]">
             <div>
-              <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-[#7A7A7A] font-semibold mb-1">
+              <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-[#7A7A7A] dark:text-[#8E8B82] font-semibold mb-1">
                 <span>{product.category}</span>
                 <span>·</span>
                 <span>{product.subCategory}</span>
               </div>
 
-              <h2 className="font-serif text-2xl font-bold text-[#1A1A1A] leading-snug">
+              <h2 className="font-serif text-2xl font-bold text-[#1A1A1A] dark:text-[#F5F5F0] leading-snug">
                 {product.name}
               </h2>
 
               <div className="flex items-center gap-3 my-3">
-                <span className="font-serif text-2xl font-bold text-[#1A1A1A]">
+                <span className="font-serif text-2xl font-bold text-[#1A1A1A] dark:text-[#F5F5F0]">
                   {formatPrice(product.price)}
                 </span>
-                <span className="text-xs bg-[#FBFBF9] border border-[#E8E6E1] text-[#1A1A1A] font-semibold px-2.5 py-1 rounded-full">
+                <span className="text-xs bg-[#FBFBF9] dark:bg-[#1E1E1C] border border-[#E8E6E1] dark:border-[#282826] text-[#1A1A1A] dark:text-[#F5F5F0] font-semibold px-2.5 py-1 rounded-full">
                   Estado: {product.condition}
                 </span>
               </div>
 
-              <p className="text-xs sm:text-sm text-[#5A5A5A] leading-relaxed font-light mb-5">
+              <p className="text-xs sm:text-sm text-[#5A5A5A] dark:text-[#A8A69E] leading-relaxed font-light mb-5">
                 {product.description}
               </p>
 
               {/* Tabla de Medidas Reales en cm */}
-              <div className="bg-[#FBFBF9] rounded-2xl p-4 border border-[#E8E6E1]">
+              <div className="bg-[#FBFBF9] dark:bg-[#121212] rounded-2xl p-4 border border-[#E8E6E1] dark:border-[#282826]">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-bold uppercase tracking-wider text-[#1A1A1A] flex items-center gap-1.5">
+                  <span className="text-xs font-bold uppercase tracking-wider text-[#1A1A1A] dark:text-[#F5F5F0] flex items-center gap-1.5">
                     <Ruler className="w-3.5 h-3.5 text-[#C5A880]" /> Medidas Reales en cm
                   </span>
                   <button
                     onClick={onOpenGuide}
-                    className="text-[11px] text-[#8F7049] hover:text-[#1A1A1A] font-semibold underline cursor-pointer"
+                    className="text-[11px] text-[#8F7049] dark:text-[#C5A880] hover:text-[#1A1A1A] dark:hover:text-white font-semibold underline cursor-pointer"
                   >
                     ¿Cómo medirse?
                   </button>
@@ -337,27 +337,27 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   {Object.entries(product.measurements)
                     .filter(([_, val]) => Boolean(val && val.trim()))
                     .map(([key, val]) => (
-                      <div key={key} className="flex items-center justify-between p-2 rounded-lg bg-white border border-[#E8E6E1]">
-                        <span className="capitalize text-[#5A5A5A] font-medium">{key}:</span>
-                        <span className="font-bold text-[#1A1A1A] tabular-nums">{val}</span>
+                      <div key={key} className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-[#181816] border border-[#E8E6E1] dark:border-[#282826]">
+                        <span className="capitalize text-[#5A5A5A] dark:text-[#A8A69E] font-medium">{key}:</span>
+                        <span className="font-bold text-[#1A1A1A] dark:text-[#F5F5F0] tabular-nums">{val}</span>
                       </div>
                     ))}
                 </div>
               </div>
 
               {/* Sello de Confianza Moda Circular */}
-              <div className="flex items-center gap-2 mt-4 text-[11px] text-[#5A5A5A]">
+              <div className="flex items-center gap-2 mt-4 text-[11px] text-[#5A5A5A] dark:text-[#A8A69E]">
                 <ShieldCheck className="w-4 h-4 text-[#C5A880] shrink-0" />
                 <span>Prenda higienizada, verificada en costuras y lista para usar.</span>
               </div>
             </div>
 
             {/* Botones de Acción */}
-            <div className="mt-6 pt-4 border-t border-[#EDEBE6]">
+            <div className="mt-6 pt-4 border-t border-[#EDEBE6] dark:border-[#282826]">
               {isInCart ? (
                 <button
                   disabled
-                  className="w-full py-3.5 px-6 rounded-xl bg-[#FBFBF9] text-[#7A7A7A] border border-[#E8E6E1] font-bold text-sm cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full py-3.5 px-6 rounded-xl bg-[#FBFBF9] dark:bg-[#1E1E1C] text-[#7A7A7A] dark:text-[#8E8B82] border border-[#E8E6E1] dark:border-[#282826] font-bold text-sm cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   <Check className="w-4 h-4 text-[#C5A880]" />
                   <span>Esta prenda única ya está en tu carrito</span>
@@ -366,7 +366,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <button
                     onClick={() => onAddToCart(product)}
-                    className="w-full py-3.5 px-4 rounded-xl border border-[#C5A880] hover:bg-[#FBFBF9] text-[#1A1A1A] font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+                    className="w-full py-3.5 px-4 rounded-xl border border-[#C5A880] hover:bg-[#FBFBF9] dark:hover:bg-[#20201E] text-[#1A1A1A] dark:text-[#F5F5F0] font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs"
                   >
                     <ShoppingBag className="w-4 h-4 text-[#C5A880]" />
                     <span>Agregar al Carrito</span>
@@ -378,7 +378,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                       onClose();
                       onBuyNow?.(product);
                     }}
-                    className="w-full py-3.5 px-4 rounded-xl bg-[#1A1A1A] hover:bg-black active:scale-[0.98] text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer group"
+                    className="w-full py-3.5 px-4 rounded-xl bg-[#1A1A1A] dark:bg-[#F5F5F0] hover:bg-black dark:hover:bg-white active:scale-[0.98] text-white dark:text-[#121212] font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer group"
                   >
                     <span>Iniciar Compra</span>
                     <ArrowRight className="w-4 h-4 text-[#C5A880] group-hover:translate-x-0.5 transition-transform" />

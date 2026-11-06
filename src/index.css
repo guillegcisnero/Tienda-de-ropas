@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@variant dark (&:where(.dark, .dark *));
+
 @theme {
   /* ========================================================
      ALGODÓN & CHAMPAÑA PÁLIDO — PALETA OFICIAL ESVEN
@@ -60,6 +62,12 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+html.dark body {
+  background-color: #121212;
+  color: #F5F5F0;
 }
 
 /* Scrollbar refinada con acento de costura en Oro Champaña */
@@ -68,6 +76,9 @@ body {
 }
 ::-webkit-scrollbar-track {
   background: #FBFBF9;
+}
+html.dark ::-webkit-scrollbar-track {
+  background: #181816;
 }
 ::-webkit-scrollbar-thumb {
   background: #C5A880;

@@ -29,7 +29,7 @@ Operating under the umbrella of **Icariel**—the parent organization committed 
 
 * **Timeless Aesthetic Over Fast Fashion:** Rather than chasing fleeting trends, ESVEN curates enduring, character-rich clothing designed to last across generations.
 * **Curated Circular Economy:** Breathing a second life into one-of-a-kind (1/1) vintage and pre-loved garments, dramatically reducing textile waste and resource depletion.
-* **Precision Sizing, Zero Returns:** Every single piece is cataloged with exact measurements in centimeters, ensuring a conscious shopping choice and minimizing reverse logistics and carbon footprints.
+* **Precision Sizing & Conscious Fit:** Every single piece is cataloged with exact measurements in centimeters, ensuring an accurate fit on unique 1/1 pieces.
 * **Frictionless Omnichannel Commerce:** Ultra-fast catalog browsing (<0.8s load), instant filtering, persistent local cart, and a hybrid checkout flow: seamless WhatsApp order preformatting (zero intermediary fees) alongside integrated payment options across desktop and mobile.
 
 ---
@@ -118,7 +118,7 @@ Formando parte del ecosistema de **Icariel**—su matriz orientada a proyectos c
 
 * **Atemporalidad frente a la Moda Descartable:** Más allá de las modas efímeras del *fast fashion*, seleccionamos indumentaria atemporal con personalidad y calidad duradera.
 * **Economía Circular y Reciclaje de Prendas:** Dar una segunda vida a prendas únicas (1/1) y vintage seleccionadas, disminuyendo el impacto ecológico y los desechos textiles.
-* **Curaduría de Feria Americana Digital:** Una experiencia cuidada y accesible que dignifica la ropa recuperada, con fichas técnicas claras y medidas exactas en centímetros para erradicar las devoluciones y reducir la huella de carbono logística.
+* **Curaduría de Feria Americana Digital:** Una experiencia cuidada y accesible que dignifica la ropa recuperada, con fichas técnicas claras y medidas exactas en centímetros para garantizar un calce informado en piezas únicas 1/1.
 * **Comercio Omnicanal Ágil y sin Fricción:** Catálogo ultra veloz (<0.8s), filtros instantáneos, carrito persistente en el dispositivo y un flujo de compra dual: envío de pedido estructurado directo a WhatsApp (cero comisiones intermediarias) junto con integración a pasarelas de pago, funcionando de forma fluida tanto en PC como en smartphone.
 
 ---

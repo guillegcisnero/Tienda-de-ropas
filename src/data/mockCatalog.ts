@@ -2,7 +2,7 @@ import { Product, StoreConfig } from '../types';
 
 export const STORE_CONFIG: StoreConfig = {
   storeName: "ESVEN",
-  tagline: "Lujo Silencioso · Calidez Textil",
+  tagline: "Moda Circular · Calidez Textil",
   whatsappNumber: "5491130378139",
   currency: "$",
   mercadoPagoPublicKey: "TEST-00000000-0000-0000-0000-000000000000"

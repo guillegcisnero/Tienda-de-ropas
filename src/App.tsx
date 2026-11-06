@@ -11,6 +11,7 @@ import { useCatalog } from './hooks/useCatalog';
 import { useCatalogFilters } from './hooks/useCatalogFilters';
 import { useFavorites } from './hooks/useFavorites';
 import { useAuth } from './hooks/useAuth';
+import { useTheme } from './hooks/useTheme';
 import { Check, Sparkles } from 'lucide-react';
 
 // Lazy loading de modales y drawers: se descargan bajo demanda sin penalizar la carga inicial (<0.8s FCP)
@@ -35,9 +36,17 @@ const CheckoutModal = lazy(() =>
 const AdminDashboard = lazy(() =>
   import('./components/admin/AdminDashboard').then(m => ({ default: m.AdminDashboard }))
 );
+const RevocationModal = lazy(() =>
+  import('./components/RevocationModal').then(m => ({ default: m.RevocationModal }))
+);
+const LegalViews = lazy(() =>
+  import('./components/LegalViews').then(m => ({ default: m.LegalViews }))
+);
+import type { LegalDocType } from './components/LegalViews';
 
 export default function App() {
   const { products, isLoading, isLive, refreshCatalog } = useCatalog();
+  const { isDark, toggleTheme } = useTheme();
   
   // Autenticación de Usuario (Supabase Auth / Local demo)
   const { user, isAuthenticated, signInWithEmail, signInWithGoogle, signOut } = useAuth();
@@ -90,11 +99,22 @@ export default function App() {
   const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [legalView, setLegalView] = useState<LegalDocType | null>(null);
+  const [isRevocationOpen, setIsRevocationOpen] = useState(false);
 
   React.useEffect(() => {
     const checkHash = () => {
-      if (window.location.hash === '#admin') {
+      const hash = window.location.hash;
+      if (hash === '#admin') {
         setIsAdminOpen(true);
+      } else if (hash === '#terminos') {
+        setLegalView('terms');
+      } else if (hash === '#privacidad') {
+        setLegalView('privacy');
+      } else if (hash === '#devoluciones') {
+        setLegalView('returns');
+      } else if (hash === '#arrepentimiento') {
+        setIsRevocationOpen(true);
       }
     };
     checkHash();
@@ -157,13 +177,37 @@ export default function App() {
     if (el) el.scrollIntoView({ behavior: 'smooth' });
   }, []);
 
+  // Vista de Documentos Legales
+  if (legalView) {
+    return (
+      <Suspense fallback={<div className="min-h-screen bg-[#FBFBF9] flex items-center justify-center text-xs text-[#8F7049]">Cargando documento...</div>}>
+        <LegalViews 
+          initialDoc={legalView} 
+          onBackToStore={() => {
+            setLegalView(null);
+            if (window.location.hash.startsWith('#')) {
+              window.history.pushState(null, '', window.location.pathname);
+            }
+          }}
+          onOpenRevocationModal={() => setIsRevocationOpen(true)}
+        />
+        {isRevocationOpen && (
+          <RevocationModal 
+            isOpen={isRevocationOpen}
+            onClose={() => setIsRevocationOpen(false)}
+          />
+        )}
+      </Suspense>
+    );
+  }
+
   return (
-    <div className="min-h-screen flex flex-col bg-white text-[#1A1A1A] selection:bg-[#C5A880] selection:text-white">
+    <div className="min-h-screen flex flex-col bg-white dark:bg-[#121212] text-[#1A1A1A] dark:text-[#F5F5F0] selection:bg-[#C5A880] selection:text-white transition-colors duration-200">
       
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-[#1A1A1A] text-white px-5 py-3 rounded-2xl shadow-2xl border border-white/20 flex items-center gap-2.5 text-xs sm:text-sm animate-bounce">
-          <Check className="w-4 h-4 text-[#C5A880]" />
+        <div className="fixed bottom-6 right-6 z-50 bg-[#1A1A1A] dark:bg-[#F5F5F0] text-white dark:text-[#121212] px-5 py-3 rounded-2xl shadow-2xl border border-white/20 dark:border-black/20 flex items-center gap-2.5 text-xs sm:text-sm animate-bounce">
+          <Check className="w-4 h-4 text-[#C5A880] dark:text-[#8F7049]" />
           <span>{toastMessage}</span>
         </div>
       )}
@@ -183,6 +227,8 @@ export default function App() {
         }}
         searchTerm={filters.search}
         onSearchChange={(val) => updateFilters({ search: val })}
+        isDark={isDark}
+        onToggleTheme={toggleTheme}
       />
 
       <main className="flex-1">
@@ -208,21 +254,21 @@ export default function App() {
           {isLoading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="animate-pulse bg-[#FBFBF9] rounded-2xl h-96 border border-[#E8E6E1]" />
+                <div key={i} className="animate-pulse bg-[#FBFBF9] dark:bg-[#181816] rounded-2xl h-96 border border-[#E8E6E1] dark:border-[#282826]" />
               ))}
             </div>
           ) : filteredProducts.length === 0 ? (
-            <div className="text-center py-20 bg-[#FBFBF9] rounded-3xl border border-[#E8E6E1] max-w-lg mx-auto p-6 shadow-xs">
+            <div className="text-center py-20 bg-[#FBFBF9] dark:bg-[#181816] rounded-3xl border border-[#E8E6E1] dark:border-[#282826] max-w-lg mx-auto p-6 shadow-xs">
               <Sparkles className="w-10 h-10 text-[#C5A880] mx-auto mb-3" />
-              <h3 className="font-serif text-xl font-bold text-[#1A1A1A] mb-2">
+              <h3 className="font-serif text-xl font-bold text-[#1A1A1A] dark:text-[#F5F5F0] mb-2">
                 No encontramos prendas con esos filtros
               </h3>
-              <p className="text-xs text-[#5A5A5A] mb-6 font-light">
+              <p className="text-xs text-[#5A5A5A] dark:text-[#A8A69E] mb-6 font-light">
                 Probá cambiando el talle o limpiá la búsqueda para ver todas las piezas disponibles en ESVEN.
               </p>
               <button
                 onClick={resetFilters}
-                className="py-2.5 px-6 rounded-full bg-[#1A1A1A] hover:bg-black text-white font-semibold text-xs shadow-md transition-all cursor-pointer"
+                className="py-2.5 px-6 rounded-full bg-[#1A1A1A] dark:bg-[#F5F5F0] hover:bg-black dark:hover:bg-white text-white dark:text-[#121212] font-semibold text-xs shadow-md transition-all cursor-pointer"
               >
                 Ver Todo el Catálogo
               </button>
@@ -251,6 +297,10 @@ export default function App() {
         storeName={STORE_CONFIG.storeName}
         tagline={STORE_CONFIG.tagline}
         onOpenAdmin={() => setIsAdminOpen(true)}
+        onOpenTerms={() => setLegalView('terms')}
+        onOpenPrivacy={() => setLegalView('privacy')}
+        onOpenReturns={() => setLegalView('returns')}
+        onOpenRevocationModal={() => setIsRevocationOpen(true)}
       />
 
       {/* Modales y Drawers bajo demanda (Code Splitting con React.lazy) */}
@@ -329,10 +379,25 @@ export default function App() {
             shipping={shipping}
             whatsappNumber={STORE_CONFIG.whatsappNumber}
             onClose={() => setIsCheckoutOpen(false)}
+            onOpenTerms={() => {
+              setIsCheckoutOpen(false);
+              setLegalView('terms');
+            }}
+            onOpenReturns={() => {
+              setIsCheckoutOpen(false);
+              setLegalView('returns');
+            }}
             onSuccessOrder={() => {
               clearCart();
               showToast('¡Muchas gracias por tu compra en ESVEN!');
             }}
+          />
+        )}
+
+        {isRevocationOpen && (
+          <RevocationModal 
+            isOpen={isRevocationOpen}
+            onClose={() => setIsRevocationOpen(false)}
           />
         )}
 
