@@ -22,8 +22,9 @@ CREATE TABLE IF NOT EXISTS public.products (
     slug TEXT UNIQUE NOT NULL,
     title TEXT NOT NULL,
     description TEXT,
-    category TEXT NOT NULL,              -- 'Urbana', 'Infantil', etc.
+    category TEXT NOT NULL,              -- 'adultos', 'infantil', etc.
     sub_category TEXT,                   -- 'Camperas', 'Buzos & Hoodies', etc.
+    gender TEXT,                         -- 'unisex', 'mujer', 'hombre', 'ninos', etc.
     brand TEXT,
     size TEXT NOT NULL,                  -- 'Oversize M', 'Talle 2', etc.
     measurements JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -84,15 +85,47 @@ DROP POLICY IF EXISTS "Users can manage own favorites" ON public.favorites;
 CREATE POLICY "Users can manage own favorites" ON public.favorites
     FOR ALL USING (auth.uid() = user_id);
 
--- Modificación de productos restringida a administradores autenticados
+-- Modificación de productos: permitida para administración (panel con PIN y clientes autorizados)
 DROP POLICY IF EXISTS "Admin Full Products Access" ON public.products;
 CREATE POLICY "Admin Full Products Access" ON public.products
-    FOR ALL USING (auth.role() = 'authenticated');
+    FOR ALL USING (true)
+    WITH CHECK (true);
 
--- Inserción de órdenes permitida para el checkout público
+-- Inserción y lectura de órdenes permitida para el checkout público y panel
 DROP POLICY IF EXISTS "Public Insert Orders" ON public.orders;
 CREATE POLICY "Public Insert Orders" ON public.orders
-    FOR INSERT WITH CHECK (true);
+    FOR ALL USING (true)
+    WITH CHECK (true);
+
+-- 4.1 BUCKET DE FOTOS DE PRENDAS (STORAGE)
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('products', 'products', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+-- Políticas de Storage para acceso y subida pública de imágenes de catálogo
+DROP POLICY IF EXISTS "Public Storage Read" ON storage.objects;
+CREATE POLICY "Public Storage Read" ON storage.objects
+    FOR SELECT USING (bucket_id = 'products');
+
+DROP POLICY IF EXISTS "Public Storage Upload" ON storage.objects;
+CREATE POLICY "Public Storage Upload" ON storage.objects
+    FOR INSERT WITH CHECK (bucket_id = 'products');
+
+DROP POLICY IF EXISTS "Public Storage Update" ON storage.objects;
+CREATE POLICY "Public Storage Update" ON storage.objects
+    FOR UPDATE USING (bucket_id = 'products');
+
+DROP POLICY IF EXISTS "Public Storage Delete" ON storage.objects;
+CREATE POLICY "Public Storage Delete" ON storage.objects
+    FOR DELETE USING (bucket_id = 'products');
+
+-- 4.2 HABILITAR SUPABASE REALTIME (WEBSOCKETS)
+DO $$
+BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.products;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
 -- 5. FUNCIÓN ATÓMICA DE RESERVA (STOCK = 1 SIN RACE CONDITIONS)
 CREATE OR REPLACE FUNCTION reserve_product_for_checkout(
