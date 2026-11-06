@@ -63,15 +63,15 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       {/* Brand Header */}
       <div>
         <div className="p-6 border-b border-white/10 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#EA8A8A] to-[#e37575] flex items-center justify-center text-[#2c221e] shadow-md shadow-[#EA8A8A]/20">
-            <Sparkles className="w-5 h-5 fill-current" />
+          <div className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center p-1 shadow-md">
+            <img src="/esven-isotipo.svg" alt="ESVEN" className="w-7 h-7" />
           </div>
           <div>
             <h1 className="font-serif font-bold text-base tracking-tight leading-none text-white">
-              Aura Retail
+              ESVEN
             </h1>
-            <p className="text-[11px] font-sans text-[#EBD5D5]/70 mt-1 uppercase tracking-wider">
-              Admin Backoffice
+            <p className="text-[10px] font-sans text-[#C5A880] mt-1 uppercase tracking-widest font-semibold">
+              Lujo Silencioso
             </p>
           </div>
         </div>

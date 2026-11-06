@@ -60,11 +60,11 @@ export const FiltersBar = memo<FiltersBarProps>(({
   }, [filters.category]);
 
   return (
-    <div className="bg-[#55443e]/80 backdrop-blur-md border-b border-white/10 sticky top-20 z-30 shadow-sm">
+    <div className="bg-[#FBFBF9]/95 backdrop-blur-md border-b border-[#E8E6E1] sticky top-20 z-30 shadow-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5">
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3.5">
           
-          {/* Categories Pills (Nunca se cortan gracias a shrink-0 y overflow suave) */}
+          {/* Categories Pills — Algodón & Lujo Silencioso */}
           <div className="flex items-center gap-2 overflow-x-auto pb-1.5 xl:pb-0 scrollbar-none shrink-0">
             {[
               { id: 'all', label: 'Todas las prendas' },
@@ -77,8 +77,8 @@ export const FiltersBar = memo<FiltersBarProps>(({
                 onClick={() => onFilterChange({ category: cat.id })}
                 className={`px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl transition-all whitespace-nowrap shrink-0 cursor-pointer ${
                   filters.category === cat.id
-                    ? 'bg-[#EA8A8A] text-[#2c221e] shadow-md font-bold'
-                    : 'text-[#EBD5D5]/90 hover:text-white bg-white/5 hover:bg-white/10 border border-white/5'
+                    ? 'bg-[#1A1A1A] text-white shadow-sm font-bold'
+                    : 'text-[#1A1A1A]/75 hover:text-[#1A1A1A] bg-white hover:bg-[#F6F6F2] border border-[#E8E6E1]'
                 }`}
               >
                 {cat.label}
@@ -86,14 +86,14 @@ export const FiltersBar = memo<FiltersBarProps>(({
             ))}
           </div>
 
-          {/* Secondary Select Filters */}
+          {/* Secondary Select Filters — 80/15/5 Blanco & Contenedores Seda */}
           <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 text-xs sm:text-sm">
             
             {/* Sexo / Género Select */}
             <select
               value={filters.gender}
               onChange={(e) => onFilterChange({ gender: e.target.value })}
-              className="bg-[#55443e] text-[#EBD5D5] border border-white/15 rounded-xl px-3 py-2 focus:border-[#EA8A8A] focus:outline-none"
+              className="bg-white text-[#1A1A1A] border border-[#E8E6E1] rounded-xl px-3 py-2 focus:border-[#C5A880] focus:ring-1 focus:ring-[#C5A880] focus:outline-none shadow-xs"
               title="Filtrar por sexo"
             >
               {genderOptions.map(opt => (
@@ -105,7 +105,7 @@ export const FiltersBar = memo<FiltersBarProps>(({
             <select
               value={filters.size}
               onChange={(e) => onFilterChange({ size: e.target.value })}
-              className="bg-[#55443e] text-[#EBD5D5] border border-white/15 rounded-xl px-3 py-2 focus:border-[#EA8A8A] focus:outline-none"
+              className="bg-white text-[#1A1A1A] border border-[#E8E6E1] rounded-xl px-3 py-2 focus:border-[#C5A880] focus:ring-1 focus:ring-[#C5A880] focus:outline-none shadow-xs"
               title="Filtrar por talle"
             >
               <option value="all">Todos los talles</option>
@@ -118,7 +118,7 @@ export const FiltersBar = memo<FiltersBarProps>(({
             <select
               value={filters.condition}
               onChange={(e) => onFilterChange({ condition: e.target.value })}
-              className="bg-[#55443e] text-[#EBD5D5] border border-white/15 rounded-xl px-3 py-2 focus:border-[#EA8A8A] focus:outline-none"
+              className="bg-white text-[#1A1A1A] border border-[#E8E6E1] rounded-xl px-3 py-2 focus:border-[#C5A880] focus:ring-1 focus:ring-[#C5A880] focus:outline-none shadow-xs"
               title="Filtrar por estado"
             >
               <option value="all">Cualquier estado</option>
@@ -132,7 +132,7 @@ export const FiltersBar = memo<FiltersBarProps>(({
             <select
               value={filters.sort}
               onChange={(e) => onFilterChange({ sort: e.target.value as FilterState['sort'] })}
-              className="bg-[#55443e] text-[#EBD5D5] border border-white/15 rounded-xl px-3 py-2 focus:border-[#EA8A8A] focus:outline-none"
+              className="bg-white text-[#1A1A1A] border border-[#E8E6E1] rounded-xl px-3 py-2 focus:border-[#C5A880] focus:ring-1 focus:ring-[#C5A880] focus:outline-none shadow-xs"
               title="Ordenar catálogo"
             >
               <option value="featured">Destacados</option>
@@ -145,7 +145,7 @@ export const FiltersBar = memo<FiltersBarProps>(({
             {isFiltered && (
               <button
                 onClick={onResetFilters}
-                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-[#EA8A8A] hover:text-white bg-[#EA8A8A]/10 hover:bg-[#EA8A8A]/20 rounded-xl border border-[#EA8A8A]/30 transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-[#8F7049] hover:text-[#1A1A1A] bg-[#C5A880]/15 hover:bg-[#C5A880]/25 rounded-xl border border-[#C5A880]/40 transition-colors cursor-pointer"
                 title="Limpiar todos los filtros"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
@@ -153,7 +153,7 @@ export const FiltersBar = memo<FiltersBarProps>(({
               </button>
             )}
 
-            <span className="text-xs text-[#EBD5D5]/60 pl-1 font-medium whitespace-nowrap">
+            <span className="text-xs text-[#5A5A5A] pl-1 font-medium whitespace-nowrap">
               {totalProductsCount} {totalProductsCount === 1 ? 'prenda' : 'prendas'}
             </span>
           </div>

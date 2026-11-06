@@ -27,7 +27,7 @@ export function buildWhatsAppOrderUrl({
   const shippingPriceText = shipping.cost === 0 ? 'Gratis' : formatPrice(shipping.cost);
 
   const message = [
-    '🌿 *¡Hola Aura Pre-Loved! Quiero comprar estas prendas únicas:*',
+    '🌿 *¡Hola ESVEN! Quiero comprar estas prendas únicas:*',
     '',
     itemsList,
     '',

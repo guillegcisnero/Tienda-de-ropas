@@ -32,22 +32,22 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm animate-fadeIn">
-      {/* Drawer Panel */}
+      {/* Drawer Panel — Marfil Seda & Calidez Textil */}
       <div 
-        className="relative w-full max-w-md bg-[#F4E8E8] text-[#2c221e] h-full shadow-2xl flex flex-col justify-between overflow-hidden animate-slideLeft"
+        className="relative w-full max-w-md bg-[#FBFBF9] text-[#1A1A1A] h-full shadow-2xl flex flex-col justify-between overflow-hidden animate-slideLeft border-l border-[#E8E6E1]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Drawer Header */}
-        <div className="p-5 border-b border-[#DEC0C0] flex items-center justify-between bg-white/50">
+        <div className="p-5 border-b border-[#E8E6E1] flex items-center justify-between bg-white">
           <div className="flex items-center gap-2.5">
-            <ShoppingBag className="w-5 h-5 text-[#68544d]" />
-            <h3 className="font-serif text-lg font-bold text-[#2c221e]">
+            <ShoppingBag className="w-5 h-5 text-[#C5A880]" />
+            <h3 className="font-serif text-lg font-bold text-[#1A1A1A]">
               Tu Carrito ({cart.length})
             </h3>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-[#5c4b45]/10 hover:bg-[#5c4b45]/20 text-[#2c221e] flex items-center justify-center transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-full bg-[#FBFBF9] hover:bg-[#F2F1EC] text-[#1A1A1A] border border-[#E8E6E1] flex items-center justify-center transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -57,21 +57,21 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
           {cart.length === 0 ? (
             <div className="text-center py-16 px-4">
-              <div className="w-16 h-16 rounded-full bg-[#EBD5D5] flex items-center justify-center mx-auto text-[#68544d] mb-4">
+              <div className="w-16 h-16 rounded-full bg-[#F4EFEA] border border-[#C5A880]/30 flex items-center justify-center mx-auto text-[#C5A880] mb-4">
                 <ShoppingBag className="w-8 h-8" />
               </div>
-              <h4 className="font-serif text-lg font-bold text-[#2c221e] mb-2">
+              <h4 className="font-serif text-lg font-bold text-[#1A1A1A] mb-2">
                 Tu carrito está vacío
               </h4>
-              <p className="text-xs text-[#5c4b45] leading-relaxed mb-6 font-light max-w-xs mx-auto">
-                Recordá que cada prenda es única. Si ves algo que te gusta, sumalo antes de que se venda.
+              <p className="text-xs text-[#5A5A5A] leading-relaxed mb-6 font-light max-w-xs mx-auto">
+                Recordá que en ESVEN cada prenda es 1/1 irrepetible. Si encontrás tu corte perfecto, sumalo antes de que se venda.
               </p>
               <button
                 onClick={() => {
                   onClose();
                   onExplore();
                 }}
-                className="py-2.5 px-6 rounded-full bg-[#EA8A8A] hover:bg-[#e37575] text-[#2c221e] font-semibold text-xs shadow-md transition-all cursor-pointer"
+                className="py-2.5 px-6 rounded-full bg-[#1A1A1A] hover:bg-black text-white font-semibold text-xs shadow-md transition-all cursor-pointer"
               >
                 Explorar Catálogo
               </button>
@@ -79,23 +79,23 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
           ) : (
             <>
               {/* Items List */}
-              <div className="space-y-3 divide-y divide-[#DEC0C0]/60">
+              <div className="space-y-3 divide-y divide-[#E8E6E1]">
                 {cart.map(item => (
                   <div key={item.id} className="pt-3 first:pt-0 flex gap-3 items-center justify-between">
                     <div className="flex items-center gap-3">
                       <img 
                         src={item.image} 
                         alt={item.name} 
-                        className="w-14 h-14 rounded-xl object-cover bg-[#55443e]/10 shrink-0 border border-[#DEC0C0]"
+                        className="w-14 h-14 rounded-xl object-cover bg-white shrink-0 border border-[#E8E6E1]"
                       />
                       <div>
-                        <h4 className="text-xs font-bold text-[#2c221e] leading-tight line-clamp-1">{item.name}</h4>
-                        <div className="text-[11px] text-[#5c4b45] flex items-center gap-1.5 mt-0.5">
+                        <h4 className="text-xs font-bold text-[#1A1A1A] leading-tight line-clamp-1">{item.name}</h4>
+                        <div className="text-[11px] text-[#5A5A5A] flex items-center gap-1.5 mt-0.5">
                           <span>{item.size}</span>
                           <span>·</span>
-                          <span className="text-emerald-800 font-medium">Prenda Única</span>
+                          <span className="text-[#8F7049] font-medium">Prenda Única</span>
                         </div>
-                        <span className="font-serif text-sm font-bold text-[#68544d] tabular-nums block mt-1">
+                        <span className="font-serif text-sm font-bold text-[#1A1A1A] tabular-nums block mt-1">
                           {formatPrice(item.price)}
                         </span>
                       </div>
@@ -103,7 +103,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
                     <button 
                       onClick={() => onRemoveItem(item.id)} 
-                      className="p-2 text-[#5c4b45] hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                      className="p-2 text-[#7A7A7A] hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                       title="Quitar prenda única del carrito"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -112,13 +112,13 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 ))}
               </div>
 
-              {/* Shipping Estimator */}
-              <div className="mt-6 pt-5 border-t border-[#DEC0C0] bg-white/60 p-4 rounded-2xl border">
+              {/* Shipping Estimator — Contenedor Blanco & Acento Champaña */}
+              <div className="mt-6 pt-5 border-t border-[#E8E6E1] bg-white p-4 rounded-2xl border">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-[#2c221e] flex items-center gap-1.5">
-                    <Truck className="w-3.5 h-3.5 text-[#EA8A8A]" /> Destino del Envío
+                  <span className="text-xs font-bold uppercase tracking-wider text-[#1A1A1A] flex items-center gap-1.5">
+                    <Truck className="w-3.5 h-3.5 text-[#C5A880]" /> Destino del Envío
                   </span>
-                  <span className="text-xs font-bold text-[#68544d]">
+                  <span className="text-xs font-bold text-[#1A1A1A]">
                     {shipping.cost === 0 ? '¡Gratis!' : formatPrice(shipping.cost)}
                   </span>
                 </div>
@@ -128,7 +128,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     Object.keys(SHIPPING_RATES).find(key => SHIPPING_RATES[key].name === shipping.service) || 'cabaGba'
                   }
                   onChange={(e) => onShippingChange(e.target.value)}
-                  className="w-full text-xs bg-white text-[#2c221e] border border-[#DEC0C0] rounded-xl p-2.5 focus:border-[#EA8A8A] focus:outline-none"
+                  className="w-full text-xs bg-[#FBFBF9] text-[#1A1A1A] border border-[#E8E6E1] rounded-xl p-2.5 focus:border-[#C5A880] focus:bg-white focus:outline-none"
                 >
                   {Object.entries(SHIPPING_RATES).map(([key, rate]) => (
                     <option key={key} value={key}>
@@ -141,21 +141,21 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
           )}
         </div>
 
-        {/* Drawer Footer */}
+        {/* Drawer Footer — 80/15/5 */}
         {cart.length > 0 && (
-          <div className="p-5 border-t border-[#DEC0C0] bg-white/70 space-y-3">
-            <div className="space-y-1.5 text-xs text-[#5c4b45]">
+          <div className="p-5 border-t border-[#E8E6E1] bg-white space-y-3">
+            <div className="space-y-1.5 text-xs text-[#5A5A5A]">
               <div className="flex justify-between">
                 <span>Subtotal ({cart.length} {cart.length === 1 ? 'prenda' : 'prendas'})</span>
-                <span className="font-semibold text-[#2c221e]">{formatPrice(subtotal)}</span>
+                <span className="font-semibold text-[#1A1A1A]">{formatPrice(subtotal)}</span>
               </div>
               <div className="flex justify-between">
                 <span>Costo de Envío</span>
-                <span className="font-semibold text-[#2c221e]">
+                <span className="font-semibold text-[#1A1A1A]">
                   {shipping.cost === 0 ? 'Gratis' : formatPrice(shipping.cost)}
                 </span>
               </div>
-              <div className="flex justify-between text-base font-serif font-bold text-[#68544d] pt-2 border-t border-[#DEC0C0]">
+              <div className="flex justify-between text-base font-serif font-bold text-[#1A1A1A] pt-2 border-t border-[#E8E6E1]">
                 <span>Total Estimado</span>
                 <span className="tabular-nums">{formatPrice(total)}</span>
               </div>
@@ -166,10 +166,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 onClose();
                 onProceedToCheckout();
               }}
-              className="w-full py-3.5 px-6 rounded-xl bg-[#EA8A8A] hover:bg-[#e37575] active:scale-[0.98] text-[#2c221e] font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-3.5 px-6 rounded-xl bg-[#1A1A1A] hover:bg-black active:scale-[0.98] text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer group"
             >
               <span>Iniciar Compra</span>
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="w-4 h-4 text-[#C5A880] group-hover:translate-x-0.5 transition-transform" />
             </button>
           </div>
         )}

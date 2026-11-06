@@ -1,43 +1,78 @@
 @import "tailwindcss";
 
 @theme {
-  --color-cocoa: #68544d;
-  --color-cocoa-dark: #55443e;
-  --color-cocoa-light: #7a645c;
-  --color-cherry: #EA8A8A;
-  --color-cherry-hover: #e37575;
-  --color-cherry-dark: #c86363;
-  --color-ivory: #EBD5D5;
-  --color-ivory-card: #F4E8E8;
-  --color-ivory-border: #DEC0C0;
-  --color-dark-text: #2c221e;
-  --color-dark-muted: #5c4b45;
+  /* ========================================================
+     ALGODÓN & CHAMPAÑA PÁLIDO — PALETA OFICIAL ESVEN
+     Lujo Silencioso · Calidez Textil
+     Regla de Interfaz 80 / 15 / 5
+     ======================================================== */
+
+  /* 80% Blanco Puro: Fondo vivo de la tienda (aire y limpieza visual) */
+  --color-cotton-white: #FFFFFF;
+  --color-pure-white: #FFFFFF;
+
+  /* Marfil Seda: Banners suaves, contenedores secundarios, sutileza táctil */
+  --color-silk-ivory: #FBFBF9;
+  --color-silk-card: #FFFFFF;
+  --color-silk-subtle: #F6F6F2;
+  --color-silk-border: #E8E6E1;
+  --color-silk-divider: #EDEBE6;
+
+  /* 15% Negro Suave: Tipografía principal de alta legibilidad y estructura */
+  --color-soft-black: #1A1A1A;
+  --color-soft-black-hover: #000000;
+  --color-soft-black-muted: #5A5A5A;
+  --color-soft-black-subtle: #7A7A7A;
+
+  /* 5% Oro Champaña: Isotipo, detalles de costura, botón secundario, acento noble */
+  --color-champagne-gold: #C5A880;
+  --color-champagne-gold-hover: #B59569;
+  --color-champagne-gold-light: #F7F3EE;
+  --color-champagne-gold-dark: #9E825D;
+
+  /* Aliases retrocompatibles para el diseño anterior de la tienda */
+  --color-cocoa: #1A1A1A;
+  --color-cocoa-dark: #000000;
+  --color-cocoa-light: #2A2A2A;
+  --color-cherry: #C5A880;
+  --color-cherry-hover: #B59569;
+  --color-cherry-dark: #9E825D;
+  --color-ivory: #FBFBF9;
+  --color-ivory-card: #FFFFFF;
+  --color-ivory-border: #E8E6E1;
+  --color-dark-text: #1A1A1A;
+  --color-dark-muted: #5A5A5A;
 
   --font-serif: "Playfair Display", Georgia, serif;
   --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
 
-  --shadow-warm: 0 10px 30px -10px rgba(44, 34, 30, 0.25);
-  --shadow-warm-lg: 0 20px 40px -15px rgba(44, 34, 30, 0.35);
+  /* Sombras y elevaciones limpias para el Lujo Silencioso */
+  --shadow-luxe-sm: 0 1px 3px 0 rgba(26, 26, 26, 0.04), 0 1px 2px -1px rgba(26, 26, 26, 0.04);
+  --shadow-luxe: 0 4px 16px -2px rgba(26, 26, 26, 0.06), 0 2px 4px -2px rgba(26, 26, 26, 0.03);
+  --shadow-luxe-lg: 0 20px 40px -12px rgba(26, 26, 26, 0.08);
+  --shadow-champagne: 0 6px 20px -3px rgba(197, 168, 128, 0.3);
 }
 
 body {
-  background-color: var(--color-cocoa);
-  color: #FAF6F0;
+  background-color: #FFFFFF;
+  color: #1A1A1A;
   font-family: var(--font-sans);
   min-height: 100vh;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
+/* Scrollbar refinada con acento de costura en Oro Champaña */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #55443e;
+  background: #FBFBF9;
 }
 ::-webkit-scrollbar-thumb {
-  background: #EA8A8A;
-  border-radius: 4px;
+  background: #C5A880;
+  border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #e37575;
+  background: #B59569;
 }

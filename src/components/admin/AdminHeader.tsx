@@ -139,12 +139,12 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({
         </div>
 
         {/* User Profile Avatar */}
-        <div className="flex items-center gap-2.5 pl-2 border-l border-[#DEC0C0]/80">
-          <div className="w-8 h-8 rounded-full bg-[#55443e] text-[#FAF6F0] flex items-center justify-center font-bold text-xs shadow-xs ring-2 ring-[#EA8A8A]/40">
-            A
+        <div className="flex items-center gap-2.5 pl-2 border-l border-[#E8E6E1]">
+          <div className="w-8 h-8 rounded-full bg-white text-[#1A1A1A] border border-[#C5A880] flex items-center justify-center p-1 shadow-xs">
+            <img src="/esven-isotipo.svg" alt="ESVEN" className="w-5 h-5" />
           </div>
           <div className="hidden xl:block text-left leading-none">
-            <span className="block text-xs font-bold text-[#2c221e]">Aura Store</span>
+            <span className="block text-xs font-bold text-[#1A1A1A]">ESVEN Store</span>
             <span className="text-[10px] text-emerald-600 font-semibold">Online</span>
           </div>
         </div>

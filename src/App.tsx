@@ -117,12 +117,12 @@ export default function App() {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#68544d] text-[#FAF6F0] selection:bg-[#EA8A8A] selection:text-white">
+    <div className="min-h-screen flex flex-col bg-white text-[#1A1A1A] selection:bg-[#C5A880] selection:text-white">
       
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-[#2c221e] text-white px-5 py-3 rounded-2xl shadow-2xl border border-white/20 flex items-center gap-2.5 text-xs sm:text-sm animate-bounce">
-          <Check className="w-4 h-4 text-[#EA8A8A]" />
+        <div className="fixed bottom-6 right-6 z-50 bg-[#1A1A1A] text-white px-5 py-3 rounded-2xl shadow-2xl border border-white/20 flex items-center gap-2.5 text-xs sm:text-sm animate-bounce">
+          <Check className="w-4 h-4 text-[#C5A880]" />
           <span>{toastMessage}</span>
         </div>
       )}
@@ -159,21 +159,21 @@ export default function App() {
           {isLoading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="animate-pulse bg-white/5 rounded-2xl h-96 border border-white/5" />
+                <div key={i} className="animate-pulse bg-[#FBFBF9] rounded-2xl h-96 border border-[#E8E6E1]" />
               ))}
             </div>
           ) : filteredProducts.length === 0 ? (
-            <div className="text-center py-20 bg-white/5 rounded-3xl border border-white/10 max-w-lg mx-auto p-6">
-              <Sparkles className="w-10 h-10 text-[#EA8A8A] mx-auto mb-3" />
-              <h3 className="font-serif text-xl font-bold text-white mb-2">
+            <div className="text-center py-20 bg-[#FBFBF9] rounded-3xl border border-[#E8E6E1] max-w-lg mx-auto p-6 shadow-xs">
+              <Sparkles className="w-10 h-10 text-[#C5A880] mx-auto mb-3" />
+              <h3 className="font-serif text-xl font-bold text-[#1A1A1A] mb-2">
                 No encontramos prendas con esos filtros
               </h3>
-              <p className="text-xs text-[#EBD5D5]/80 mb-6 font-light">
-                Probá cambiando el talle o limpiá la búsqueda para ver todas las piezas disponibles.
+              <p className="text-xs text-[#5A5A5A] mb-6 font-light">
+                Probá cambiando el talle o limpiá la búsqueda para ver todas las piezas disponibles en ESVEN.
               </p>
               <button
                 onClick={resetFilters}
-                className="py-2.5 px-6 rounded-full bg-[#EA8A8A] hover:bg-[#e37575] text-[#2c221e] font-semibold text-xs shadow-md transition-all cursor-pointer"
+                className="py-2.5 px-6 rounded-full bg-[#1A1A1A] hover:bg-black text-white font-semibold text-xs shadow-md transition-all cursor-pointer"
               >
                 Ver Todo el Catálogo
               </button>
@@ -248,7 +248,7 @@ export default function App() {
             onClose={() => setIsCheckoutOpen(false)}
             onSuccessOrder={() => {
               clearCart();
-              showToast('¡Muchas gracias por tu compra en Aura Pre-Loved!');
+              showToast('¡Muchas gracias por tu compra en ESVEN!');
             }}
           />
         )}

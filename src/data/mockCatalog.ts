@@ -1,8 +1,8 @@
 import { Product, StoreConfig } from '../types';
 
 export const STORE_CONFIG: StoreConfig = {
-  storeName: "Aura Pre-Loved",
-  tagline: "Moda Circular & Prendas Únicas",
+  storeName: "ESVEN",
+  tagline: "Lujo Silencioso · Calidez Textil",
   whatsappNumber: "5491130378139",
   currency: "$",
   mercadoPagoPublicKey: "TEST-00000000-0000-0000-0000-000000000000"
