@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, 
   Sparkles, 
@@ -9,10 +9,15 @@ import {
   Tag, 
   Check, 
   CheckCircle2, 
-  AlertCircle 
+  AlertCircle,
+  Upload,
+  Trash2,
+  Camera,
+  Loader2
 } from 'lucide-react';
 import { Product } from '../../../types';
 import { CATEGORIES, CATEGORY_LIST } from '../../../data/categories';
+import { supabase, isSupabaseConfigured } from '../../../services/supabase';
 
 interface ProductDrawerProps {
   isOpen: boolean;
@@ -27,6 +32,7 @@ interface ProductDrawerProps {
     price: number;
     description: string;
     image: string;
+    images?: string[];
     measurements: Record<string, string>;
     available: boolean;
     isSinglePiece: boolean;
@@ -57,6 +63,7 @@ export const ProductDrawer: React.FC<ProductDrawerProps> = ({
   const [price, setPrice] = useState('');
   const [description, setDescription] = useState('');
   const [image, setImage] = useState('');
+  const [images, setImages] = useState<string[]>([]);
   const [available, setAvailable] = useState(true);
 
   // Measurements
@@ -68,6 +75,9 @@ export const ProductDrawer: React.FC<ProductDrawerProps> = ({
   const [tiro, setTiro] = useState('');
 
   const [imageError, setImageError] = useState(false);
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Populate form on initialProduct change or reset on create mode
   useEffect(() => {
@@ -92,7 +102,12 @@ export const ProductDrawer: React.FC<ProductDrawerProps> = ({
       setCondition(initialProduct.condition || '9.5/10 (Impecable / Como nueva)');
       setPrice(initialProduct.price ? String(initialProduct.price) : '');
       setDescription(initialProduct.description || '');
-      setImage(initialProduct.image || '');
+      
+      const initialImages = (initialProduct.images && initialProduct.images.length > 0)
+        ? initialProduct.images
+        : (initialProduct.image ? [initialProduct.image] : []);
+      setImages(initialImages);
+      setImage(initialImages[0] || initialProduct.image || '');
       setAvailable(initialProduct.available ?? true);
 
       // Extract measurements
@@ -104,6 +119,7 @@ export const ProductDrawer: React.FC<ProductDrawerProps> = ({
       setCintura(m.cintura ? m.cintura.replace(/\D/g, '') : '');
       setTiro(m.tiro ? m.tiro.replace(/\D/g, '') : '');
       setImageError(false);
+      setUploadError(null);
     } else {
       // Reset form
       setName('');
@@ -117,6 +133,7 @@ export const ProductDrawer: React.FC<ProductDrawerProps> = ({
       setPrice('');
       setDescription('');
       setImage('');
+      setImages([]);
       setAvailable(true);
       setSisa('');
       setLargo('');
@@ -125,6 +142,7 @@ export const ProductDrawer: React.FC<ProductDrawerProps> = ({
       setCintura('');
       setTiro('');
       setImageError(false);
+      setUploadError(null);
     }
   }, [initialProduct, isOpen]);
 
@@ -152,6 +170,73 @@ export const ProductDrawer: React.FC<ProductDrawerProps> = ({
     }
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    if (!isSupabaseConfigured || !supabase) {
+      alert('Supabase no está configurado para almacenar fotos.');
+      return;
+    }
+
+    setIsUploadingImages(true);
+    setUploadError(null);
+
+    try {
+      const uploadedUrls: string[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+        const cleanName = `${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+
+        const { error: uploadErr } = await supabase.storage
+          .from('products')
+          .upload(cleanName, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (uploadErr) {
+          console.error('Error al subir a Supabase Storage:', uploadErr);
+          throw uploadErr;
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('products')
+          .getPublicUrl(cleanName);
+
+        uploadedUrls.push(publicUrl);
+      }
+
+      setImages(prev => {
+        const updated = [...prev, ...uploadedUrls];
+        if (!image && updated.length > 0) {
+          setImage(updated[0]);
+        }
+        return updated;
+      });
+      setImageError(false);
+    } catch (err: any) {
+      setUploadError(err.message || 'Error al subir imágenes a Supabase Storage.');
+    } finally {
+      setIsUploadingImages(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleRemoveImage = (indexToRemove: number) => {
+    setImages(prev => {
+      const updated = prev.filter((_, idx) => idx !== indexToRemove);
+      if (image === prev[indexToRemove]) {
+        setImage(updated[0] || '');
+      }
+      return updated;
+    });
+  };
+
+  const handleSetMainImage = (url: string) => {
+    setImage(url);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !price) {
@@ -171,6 +256,9 @@ export const ProductDrawer: React.FC<ProductDrawerProps> = ({
     if (cintura.trim()) measurements.cintura = `${cintura.trim()} cm`;
     if (tiro.trim()) measurements.tiro = `${tiro.trim()} cm`;
 
+    const finalImages = images.length > 0 ? images : (image.trim() ? [image.trim()] : []);
+    const mainImage = image.trim() || finalImages[0] || 'https://images.unsplash.com/photo-1544441893-675973e31985?w=600&auto=format&fit=crop&q=80';
+
     await onSubmit({
       id: initialProduct?.id,
       name: name.trim(),
@@ -181,7 +269,8 @@ export const ProductDrawer: React.FC<ProductDrawerProps> = ({
       condition,
       price: Number(price),
       description: description.trim() || `Prenda única seleccionada de ${currentCategoryConfig.label.toLowerCase()}.`,
-      image: image.trim() || 'https://images.unsplash.com/photo-1544441893-675973e31985?w=600&auto=format&fit=crop&q=80',
+      image: mainImage,
+      images: finalImages,
       measurements,
       available,
       isSinglePiece: true
@@ -489,21 +578,115 @@ export const ProductDrawer: React.FC<ProductDrawerProps> = ({
               </div>
             </div>
 
-            {/* 6. URL de Imagen */}
-            <div>
-              <label className="block text-[#5c4b45] font-semibold mb-1">
-                URL de la Imagen *
-              </label>
+            {/* 6. Fotos de la Prenda (Supabase Storage + URL) */}
+            <div className="bg-white p-4 rounded-2xl border border-[#DEC0C0] space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-[#55443e] font-bold">
+                  <Camera className="w-3.5 h-3.5 text-[#EA8A8A]" />
+                  <span>Fotos de la Prenda</span>
+                </div>
+                <span className="text-[10px] text-[#5c4b45]">
+                  {images.length} {images.length === 1 ? 'foto' : 'fotos'}
+                </span>
+              </div>
+
+              {/* Botón de subida directa a Supabase Storage */}
               <input
-                type="url"
-                value={image}
-                onChange={(e) => {
-                  setImage(e.target.value);
-                  setImageError(false);
-                }}
-                placeholder="https://images.unsplash.com/..."
-                className="w-full bg-white border border-[#DEC0C0] rounded-xl px-3.5 py-2.5 text-[#2c221e] focus:outline-none focus:ring-2 focus:ring-[#EA8A8A]"
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileUpload}
+                multiple
+                accept="image/*"
+                className="hidden"
               />
+
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploadingImages}
+                className="w-full py-3 px-4 rounded-xl border-2 border-dashed border-[#EA8A8A] bg-[#EA8A8A]/10 hover:bg-[#EA8A8A]/20 transition-all flex items-center justify-center gap-2 text-[#2c221e] font-bold text-xs cursor-pointer disabled:opacity-50"
+              >
+                {isUploadingImages ? (
+                  <>
+                    <Loader2 className="w-4 h-4 text-[#EA8A8A] animate-spin" />
+                    <span>Subiendo fotos a Supabase Storage...</span>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4 text-[#EA8A8A]" />
+                    <span>Subir desde dispositivo (Cámara / Galería)</span>
+                  </>
+                )}
+              </button>
+
+              {uploadError && (
+                <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-[11px] flex items-center gap-1.5">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{uploadError}</span>
+                </div>
+              )}
+
+              {/* Galería de miniaturas subidas */}
+              {images.length > 0 && (
+                <div className="grid grid-cols-4 gap-2 pt-1">
+                  {images.map((imgUrl, idx) => {
+                    const isMain = image === imgUrl;
+                    return (
+                      <div 
+                        key={idx}
+                        className={`relative aspect-square rounded-xl overflow-hidden border-2 group transition-all ${
+                          isMain ? 'border-[#EA8A8A] shadow-xs' : 'border-[#DEC0C0]'
+                        }`}
+                      >
+                        <img 
+                          src={imgUrl} 
+                          alt={`Foto ${idx + 1}`}
+                          className="w-full h-full object-cover cursor-pointer"
+                          onClick={() => handleSetMainImage(imgUrl)}
+                        />
+                        {isMain && (
+                          <span className="absolute bottom-1 left-1 right-1 bg-[#EA8A8A] text-[#2c221e] text-[9px] font-bold text-center py-0.5 rounded-sm">
+                            Principal
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveImage(idx);
+                          }}
+                          className="absolute top-1 right-1 w-5 h-5 bg-black/60 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors cursor-pointer"
+                          title="Eliminar foto"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Opción secundaria: URL manual */}
+              <div className="pt-2 border-t border-[#DEC0C0]/60">
+                <label className="block text-[10px] text-[#5c4b45] font-semibold mb-1">
+                  O pegar URL directa de imagen externa:
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="url"
+                    value={image}
+                    onChange={(e) => {
+                      setImage(e.target.value);
+                      setImageError(false);
+                      if (e.target.value && !images.includes(e.target.value)) {
+                        setImages(prev => [e.target.value, ...prev]);
+                      }
+                    }}
+                    placeholder="https://..."
+                    className="flex-1 bg-[#FAF6F0] border border-[#DEC0C0] rounded-lg px-2.5 py-1.5 text-xs text-[#2c221e] focus:outline-none focus:ring-1 focus:ring-[#EA8A8A]"
+                  />
+                </div>
+              </div>
             </div>
 
             {/* 7. Descripción */}

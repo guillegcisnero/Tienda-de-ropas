@@ -142,7 +142,9 @@ export async function createProduct(productData: Omit<Product, 'id'>): Promise<P
       measurements: productData.measurements,
       condition: productData.condition,
       price: productData.price,
-      images: [productData.image],
+      images: (productData.images && productData.images.length > 0) 
+        ? productData.images 
+        : (productData.image ? [productData.image] : []),
       status: 'available',
       is_single_piece: true
     }
@@ -185,7 +187,11 @@ export async function updateProduct(
   if (productData.measurements !== undefined) payload.measurements = productData.measurements;
   if (productData.condition !== undefined) payload.condition = productData.condition;
   if (productData.price !== undefined) payload.price = productData.price;
-  if (productData.image !== undefined) payload.images = [productData.image];
+  if (productData.images !== undefined && productData.images.length > 0) {
+    payload.images = productData.images;
+  } else if (productData.image !== undefined) {
+    payload.images = [productData.image];
+  }
   if (productData.available !== undefined) {
     payload.status = productData.available ? 'available' : 'sold';
     if (productData.available) payload.reserved_until = null;

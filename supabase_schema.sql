@@ -70,32 +70,56 @@ CREATE TABLE IF NOT EXISTS public.favorites (
     UNIQUE(user_id, product_id)
 );
 
--- 4. ROW LEVEL SECURITY (RLS)
+-- ========================================================
+-- 4. ROW LEVEL SECURITY (RLS) — CONFORME A RES. AAIP 47/2018 & LEY 25.326
+-- Confidencialidad e Integridad de Datos Personales
+-- ========================================================
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.favorites ENABLE ROW LEVEL SECURITY;
 
--- Catálogo: lectura pública para prendas disponibles o en reserva temporal (y vendidas para tracking de favoritos/carrito)
+-- Catálogo: lectura pública para prendas disponibles, reservadas o vendidas
 DROP POLICY IF EXISTS "Public Read Available Products" ON public.products;
 CREATE POLICY "Public Read Available Products" ON public.products
     FOR SELECT USING (status IN ('available', 'reserved', 'sold'));
 
--- Favoritos: cada usuario autenticado administra únicamente sus propios favoritos
-DROP POLICY IF EXISTS "Users can manage own favorites" ON public.favorites;
-CREATE POLICY "Users can manage own favorites" ON public.favorites
-    FOR ALL USING (auth.uid() = user_id);
-
--- Modificación de productos: permitida para administración (panel con PIN y clientes autorizados)
+-- Modificación de productos: restringida exclusivamente al administrador autorizado
 DROP POLICY IF EXISTS "Admin Full Products Access" ON public.products;
 CREATE POLICY "Admin Full Products Access" ON public.products
-    FOR ALL USING (true)
-    WITH CHECK (true);
+    FOR ALL USING (
+        auth.jwt() ->> 'email' = 'guillegcisnero@gmail.com' 
+        OR auth.role() = 'service_role'
+    )
+    WITH CHECK (
+        auth.jwt() ->> 'email' = 'guillegcisnero@gmail.com' 
+        OR auth.role() = 'service_role'
+    );
 
--- Inserción y lectura de órdenes permitida para el checkout público y panel
+-- Favoritos: cada usuario administra y visualiza única y exclusivamente sus propios favoritos
+DROP POLICY IF EXISTS "Users can manage own favorites" ON public.favorites;
+CREATE POLICY "Users can manage own favorites" ON public.favorites
+    FOR ALL USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
+
+-- Órdenes: Inserción permitida para checkout público sin exponer datos de terceros
 DROP POLICY IF EXISTS "Public Insert Orders" ON public.orders;
 CREATE POLICY "Public Insert Orders" ON public.orders
-    FOR ALL USING (true)
-    WITH CHECK (true);
+    FOR INSERT WITH CHECK (true);
+
+-- Órdenes: Lectura y gestión restringida estrictamente al administrador (prohibido a la anon key pública)
+DROP POLICY IF EXISTS "Admin Read Orders" ON public.orders;
+CREATE POLICY "Admin Read Orders" ON public.orders
+    FOR SELECT USING (
+        auth.jwt() ->> 'email' = 'guillegcisnero@gmail.com' 
+        OR auth.role() = 'service_role'
+    );
+
+DROP POLICY IF EXISTS "Admin Manage Orders" ON public.orders;
+CREATE POLICY "Admin Manage Orders" ON public.orders
+    FOR UPDATE USING (
+        auth.jwt() ->> 'email' = 'guillegcisnero@gmail.com' 
+        OR auth.role() = 'service_role'
+    );
 
 -- 4.1 BUCKET DE FOTOS DE PRENDAS (STORAGE)
 INSERT INTO storage.buckets (id, name, public) 
@@ -167,107 +191,15 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 7. SEED DATA (POBLACIÓN INICIAL CON PRENDAS DEL CATÁLOGO)
+-- 7. SEED DATA (Desactivado para inicio con catálogo 100% limpio)
+-- Para sembrar prendas de prueba, descomentar el bloque siguiente:
+/*
 INSERT INTO public.products (
     id, slug, title, category, sub_category, condition, size, measurements, description, price, weight_grams, images, is_single_piece, status
 ) VALUES 
-(
-    'prod-001',
-    'campera-denim-vintage-90s',
-    'Campera Denim Vintage 90s',
-    'Urbana',
-    'Camperas',
-    '9/10 (Excelente)',
-    'Oversize M',
-    '{"sisa": "54 cm", "largo": "62 cm", "manga": "58 cm", "hombros": "48 cm"}'::jsonb,
-    'Denim rígido 100% algodón lavado vintage original de los 90s. Botones metálicos de época y costuras reforzadas intactas.',
-    28500,
-    750,
-    ARRAY['https://images.unsplash.com/photo-1544441893-675973e31985?w=600&auto=format&fit=crop&q=80'],
-    true,
-    'available'
-),
-(
-    'prod-002',
-    'enterito-jardinero-corduroy-mostaza',
-    'Enterito Jardinero Corduroy Mostaza',
-    'Infantil',
-    'Bebés & Niños',
-    '10/10 (Sin uso con etiqueta)',
-    'Talle 2 (24 Meses)',
-    '{"sisa": "31 cm", "largo": "68 cm", "tiro": "24 cm", "cintura": "33 cm"}'::jsonb,
-    'Pana acanalada suave color mostaza cálido. Broches metálicos ajustables en tirantes y broches en entrepierna para fácil cambiado.',
-    17500,
-    300,
-    ARRAY['https://images.unsplash.com/photo-1522771930-78848d9293e8?w=600&auto=format&fit=crop&q=80'],
-    true,
-    'available'
-),
-(
-    'prod-003',
-    'buzo-hoodie-oversize-washed-lilac',
-    'Buzo Hoodie Oversize Washed Lilac',
-    'Urbana',
-    'Buzos & Hoodies',
-    '9/10 (Excelente)',
-    'Talle L',
-    '{"sisa": "60 cm", "largo": "70 cm", "manga": "62 cm"}'::jsonb,
-    'Frisa de algodón pesada con teñido artesanal desgastado. Capucha doble con cordón de ajuste de algodón crudo.',
-    24000,
-    650,
-    ARRAY['https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=600&auto=format&fit=crop&q=80'],
-    true,
-    'available'
-),
-(
-    'prod-004',
-    'cardigan-tejido-motas-nordico',
-    'Cardigan Tejido Motas Nórdico',
-    'Infantil',
-    'Tejidos',
-    '10/10 (Como nuevo)',
-    'Talle 4 Años',
-    '{"sisa": "36 cm", "largo": "42 cm", "manga": "35 cm"}'::jsonb,
-    'Hilado hipoalergénico dralón suave con punto popcorn/motas en relieve. Botones de madera natural.',
-    19800,
-    280,
-    ARRAY['https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=600&auto=format&fit=crop&q=80'],
-    true,
-    'available'
-),
-(
-    'prod-005',
-    'pantalon-carpenter-wide-leg',
-    'Pantalón Carpenter Wide Leg Arena',
-    'Urbana',
-    'Pantalones',
-    '9.5/10 (Impecable)',
-    'Talle 40 (30 US)',
-    '{"cintura": "40 cm", "cadera": "52 cm", "largo": "104 cm", "tiro": "31 cm", "bota": "24 cm"}'::jsonb,
-    'Gabardina pesada 100% algodón color arena. Bolsillo lateral utilitario y presilla para martillo.',
-    26500,
-    580,
-    ARRAY['https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=600&auto=format&fit=crop&q=80'],
-    true,
-    'available'
-),
-(
-    'prod-006',
-    'vestido-lino-vintage-floral',
-    'Vestido Midi Lino Botánico',
-    'Urbana',
-    'Vestidos',
-    '9/10 (Excelente)',
-    'Talle S/M',
-    '{"sisa": "44 cm", "cintura": "38 cm", "largo": "112 cm"}'::jsonb,
-    'Lino con mezcla de rayón para hermosa caída. Botones frontales de nácar y estampa floral botánica en tonos oliva y terracota.',
-    29900,
-    340,
-    ARRAY['https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=600&auto=format&fit=crop&q=80'],
-    true,
-    'available'
-)
+...
 ON CONFLICT (id) DO NOTHING;
+*/
 
 -- ========================================================
 -- 9. TABLA DE REVOCACIONES Y ARREPENTIMIENTO (LEY 24.240 / RES. 424/2020)
@@ -302,16 +234,24 @@ CREATE POLICY "Permitir inserción pública de solicitudes de arrepentimiento"
     TO public
     WITH CHECK (true);
 
--- Solo usuarios autenticados como administradores pueden consultar o modificar solicitudes
+-- Solo el administrador autorizado puede consultar o modificar solicitudes de arrepentimiento
+DROP POLICY IF EXISTS "Lectura restringida de revocaciones para administradores" ON public.revocations;
 CREATE POLICY "Lectura restringida de revocaciones para administradores"
     ON public.revocations
     FOR SELECT
     TO authenticated
-    USING (true);
+    USING (
+        auth.jwt() ->> 'email' = 'guillegcisnero@gmail.com' 
+        OR auth.role() = 'service_role'
+    );
 
+DROP POLICY IF EXISTS "Actualización restringida de revocaciones para administradores" ON public.revocations;
 CREATE POLICY "Actualización restringida de revocaciones para administradores"
     ON public.revocations
     FOR UPDATE
     TO authenticated
-    USING (true);
+    USING (
+        auth.jwt() ->> 'email' = 'guillegcisnero@gmail.com' 
+        OR auth.role() = 'service_role'
+    );
 

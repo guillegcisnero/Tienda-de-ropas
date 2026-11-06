@@ -4,6 +4,7 @@ import { Product, ShippingConfig, BuyerInfo } from '../types';
 import { createPaymentPreference } from '../services/payment';
 import { buildWhatsAppOrderUrl } from '../services/whatsapp';
 import { formatPrice } from '../utils/formatters';
+import { createOrder } from '../services/orderService';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -56,6 +57,16 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
     setIsProcessingMp(true);
     try {
+      // Registrar orden en base de datos de Supabase
+      await createOrder({
+        cart,
+        buyer,
+        shipping,
+        total,
+        gateway: 'mercadopago',
+        paymentStatus: 'pending'
+      });
+
       const response = await createPaymentPreference({ cart, buyer, shipping });
       if (response?.initPoint) {
         window.location.href = response.initPoint;
@@ -70,7 +81,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   };
 
   // Flujo 2: WhatsApp Directo
-  const handlePayWithWhatsApp = (e: React.FormEvent) => {
+  const handlePayWithWhatsApp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!buyer.name || !buyer.phone) {
       alert('Por favor ingresá al menos tu Nombre y WhatsApp para coordinar el pedido.');
@@ -80,6 +91,16 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       alert('Por favor aceptá los Términos y Condiciones y las Políticas de Devolución para continuar.');
       return;
     }
+
+    // Registrar orden en base de datos de Supabase
+    await createOrder({
+      cart,
+      buyer,
+      shipping,
+      total,
+      gateway: 'whatsapp',
+      paymentStatus: 'pending'
+    });
 
     const url = buildWhatsAppOrderUrl({
       cart,
