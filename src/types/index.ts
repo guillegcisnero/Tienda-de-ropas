@@ -22,6 +22,7 @@ export interface Product {
   price: number;
   weightGrams?: number;
   image: string;
+  images?: string[];
   isSinglePiece: boolean;
   available: boolean;
   createdAt?: string;

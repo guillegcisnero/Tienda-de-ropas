@@ -60,14 +60,29 @@ CREATE TABLE IF NOT EXISTS public.orders (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 3.1 TABLA DE FAVORITOS (WISHLIST DE USUARIOS)
+CREATE TABLE IF NOT EXISTS public.favorites (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    product_id TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(user_id, product_id)
+);
+
 -- 4. ROW LEVEL SECURITY (RLS)
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.favorites ENABLE ROW LEVEL SECURITY;
 
--- Catálogo: lectura pública para prendas disponibles o en reserva temporal
+-- Catálogo: lectura pública para prendas disponibles o en reserva temporal (y vendidas para tracking de favoritos/carrito)
 DROP POLICY IF EXISTS "Public Read Available Products" ON public.products;
 CREATE POLICY "Public Read Available Products" ON public.products
-    FOR SELECT USING (status IN ('available', 'reserved'));
+    FOR SELECT USING (status IN ('available', 'reserved', 'sold'));
+
+-- Favoritos: cada usuario autenticado administra únicamente sus propios favoritos
+DROP POLICY IF EXISTS "Users can manage own favorites" ON public.favorites;
+CREATE POLICY "Users can manage own favorites" ON public.favorites
+    FOR ALL USING (auth.uid() = user_id);
 
 -- Modificación de productos restringida a administradores autenticados
 DROP POLICY IF EXISTS "Admin Full Products Access" ON public.products;

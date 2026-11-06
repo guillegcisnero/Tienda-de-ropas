@@ -9,6 +9,8 @@ import { Product, ShippingConfig } from './types';
 import { useCart } from './hooks/useCart';
 import { useCatalog } from './hooks/useCatalog';
 import { useCatalogFilters } from './hooks/useCatalogFilters';
+import { useFavorites } from './hooks/useFavorites';
+import { useAuth } from './hooks/useAuth';
 import { Check, Sparkles } from 'lucide-react';
 
 // Lazy loading de modales y drawers: se descargan bajo demanda sin penalizar la carga inicial (<0.8s FCP)
@@ -21,6 +23,12 @@ const MeasurementsGuideModal = lazy(() =>
 const CartDrawer = lazy(() =>
   import('./components/CartDrawer').then(m => ({ default: m.CartDrawer }))
 );
+const FavoritesDrawer = lazy(() =>
+  import('./components/FavoritesDrawer').then(m => ({ default: m.FavoritesDrawer }))
+);
+const AuthModal = lazy(() =>
+  import('./components/AuthModal').then(m => ({ default: m.AuthModal }))
+);
 const CheckoutModal = lazy(() =>
   import('./components/CheckoutModal').then(m => ({ default: m.CheckoutModal }))
 );
@@ -30,7 +38,32 @@ const AdminDashboard = lazy(() =>
 
 export default function App() {
   const { products, isLoading, isLive, refreshCatalog } = useCatalog();
-  const { cart, itemCount, isInCart, addToCart, removeFromCart, clearCart } = useCart();
+  
+  // Autenticación de Usuario (Supabase Auth / Local demo)
+  const { user, isAuthenticated, signInWithEmail, signInWithGoogle, signOut } = useAuth();
+
+  // Carrito con Reconciliación de Stock en Tiempo Real frente al Catálogo
+  const { 
+    cart, 
+    availableItems, 
+    unavailableItems, 
+    itemCount, 
+    isInCart, 
+    addToCart, 
+    removeFromCart, 
+    clearCart,
+    moveUnavailableToFavorites 
+  } = useCart(products);
+
+  // Favoritos persistentes con sincronización en la nube opcional
+  const {
+    favoriteProducts,
+    favoritesCount,
+    isFavorite,
+    toggleFavorite,
+    removeFavorite
+  } = useFavorites(products, user?.id);
+
   const {
     filters,
     filteredProducts,
@@ -48,10 +81,12 @@ export default function App() {
     service: SHIPPING_RATES.cabaGba.name
   });
 
-  // Modales
+  // Modales y Drawers
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isFavoritesOpen, setIsFavoritesOpen] = useState(false);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
@@ -97,6 +132,12 @@ export default function App() {
     showToast('Prenda quitada del carrito');
   }, [removeFromCart, showToast]);
 
+  const handleToggleFavorite = useCallback((product: Product) => {
+    const wasFavorite = isFavorite(product.id);
+    toggleFavorite(product);
+    showToast(wasFavorite ? 'Prenda quitada de favoritos' : '¡Prenda guardada en favoritos!');
+  }, [isFavorite, toggleFavorite, showToast]);
+
   const handleShippingChange = useCallback((regionKey: string) => {
     const rate = SHIPPING_RATES[regionKey] || SHIPPING_RATES.cabaGba;
     setShipping(prev => ({
@@ -132,12 +173,20 @@ export default function App() {
         storeName={STORE_CONFIG.storeName}
         cartCount={itemCount}
         onOpenCart={() => setIsCartOpen(true)}
+        favoritesCount={favoritesCount}
+        onOpenFavorites={() => setIsFavoritesOpen(true)}
+        user={user}
+        onOpenAuth={() => setIsAuthOpen(true)}
+        onSignOut={() => {
+          signOut();
+          showToast('Sesión cerrada');
+        }}
         searchTerm={filters.search}
         onSearchChange={(val) => updateFilters({ search: val })}
       />
 
       <main className="flex-1">
-        {/* Hero Section (Memoizado) */}
+        {/* Hero Section */}
         <Hero 
           onOpenGuide={() => setIsGuideOpen(true)}
           onExplore={handleScrollToCatalog}
@@ -185,8 +234,10 @@ export default function App() {
                   key={product.id}
                   product={product}
                   isInCart={isInCart(product.id)}
+                  isFavorite={isFavorite(product.id)}
                   onOpenDetail={handleOpenDetail}
                   onAddToCart={handleAddToCart}
+                  onToggleFavorite={handleToggleFavorite}
                   onBuyNow={handleBuyNow}
                 />
               ))}
@@ -195,7 +246,7 @@ export default function App() {
         </section>
       </main>
 
-      {/* Footer (Memoizado) */}
+      {/* Footer */}
       <Footer 
         storeName={STORE_CONFIG.storeName}
         tagline={STORE_CONFIG.tagline}
@@ -209,8 +260,10 @@ export default function App() {
             product={selectedProduct}
             isOpen={isDetailOpen}
             isInCart={isInCart(selectedProduct.id)}
+            isFavorite={isFavorite(selectedProduct.id)}
             onClose={() => setIsDetailOpen(false)}
             onAddToCart={handleAddToCart}
+            onToggleFavorite={handleToggleFavorite}
             onBuyNow={handleBuyNow}
             onOpenGuide={() => {
               setIsDetailOpen(false);
@@ -226,13 +279,43 @@ export default function App() {
           />
         )}
 
+        {isFavoritesOpen && (
+          <FavoritesDrawer
+            isOpen={isFavoritesOpen}
+            onClose={() => setIsFavoritesOpen(false)}
+            favorites={favoriteProducts}
+            onRemoveFavorite={removeFavorite}
+            onAddToCart={handleAddToCart}
+            isInCart={isInCart}
+            onOpenProductDetail={handleOpenDetail}
+            onOpenAuth={() => setIsAuthOpen(true)}
+            isAuthenticated={isAuthenticated}
+            userEmail={user?.email}
+          />
+        )}
+
+        {isAuthOpen && (
+          <AuthModal
+            isOpen={isAuthOpen}
+            onClose={() => setIsAuthOpen(false)}
+            onSignInWithEmail={signInWithEmail}
+            onSignInWithGoogle={signInWithGoogle}
+          />
+        )}
+
         {isCartOpen && (
           <CartDrawer 
             isOpen={isCartOpen}
             cart={cart}
+            availableItems={availableItems}
+            unavailableItems={unavailableItems}
             shipping={shipping}
             onClose={() => setIsCartOpen(false)}
             onRemoveItem={handleRemoveFromCart}
+            onMoveToFavorites={(item) => {
+              moveUnavailableToFavorites(item.id, toggleFavorite);
+              showToast('Prenda pasada a tus favoritos');
+            }}
             onShippingChange={handleShippingChange}
             onProceedToCheckout={() => setIsCheckoutOpen(true)}
             onExplore={handleScrollToCatalog}
@@ -242,7 +325,7 @@ export default function App() {
         {isCheckoutOpen && (
           <CheckoutModal 
             isOpen={isCheckoutOpen}
-            cart={cart}
+            cart={availableItems}
             shipping={shipping}
             whatsappNumber={STORE_CONFIG.whatsappNumber}
             onClose={() => setIsCheckoutOpen(false)}

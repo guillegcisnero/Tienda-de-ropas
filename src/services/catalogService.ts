@@ -38,6 +38,7 @@ export function mapRowToProduct(row: DatabaseProductRow): Product {
     price: Number(row.price),
     weightGrams: row.weight_grams,
     image: (row.images && row.images.length > 0) ? row.images[0] : '',
+    images: (row.images && row.images.length > 0) ? row.images : [],
     isSinglePiece: row.is_single_piece ?? true,
     available: row.status === 'available',
     createdAt: row.created_at,

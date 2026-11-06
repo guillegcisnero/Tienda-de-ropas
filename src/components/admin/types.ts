@@ -24,6 +24,8 @@ export interface AdminOrder {
   customerEmail?: string;
   city?: string;
   province?: string;
+  shippingAddress?: string;
+  shippingCost?: number;
   items: AdminOrderItem[];
   totalAmount: number;
   gateway: GatewayType;

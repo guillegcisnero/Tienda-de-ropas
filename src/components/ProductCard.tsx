@@ -1,21 +1,25 @@
 import React, { memo } from 'react';
-import { Ruler, ShoppingBag, Check } from 'lucide-react';
+import { Ruler, ShoppingBag, Check, Heart } from 'lucide-react';
 import { Product } from '../types';
 import { formatPrice } from '../utils/formatters';
 
 interface ProductCardProps {
   product: Product;
   isInCart: boolean;
+  isFavorite?: boolean;
   onOpenDetail: (product: Product) => void;
   onAddToCart: (product: Product) => void;
+  onToggleFavorite?: (product: Product) => void;
   onBuyNow?: (product: Product) => void;
 }
 
 export const ProductCard = memo<ProductCardProps>(({
   product,
   isInCart,
+  isFavorite = false,
   onOpenDetail,
   onAddToCart,
+  onToggleFavorite,
   onBuyNow
 }) => {
   return (
@@ -33,7 +37,7 @@ export const ProductCard = memo<ProductCardProps>(({
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
 
         {/* Single Piece Badge */}
-        <div className="absolute top-3 left-3 flex flex-col gap-1.5">
+        <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10 pointer-events-none">
           <span className="bg-[#1A1A1A]/85 backdrop-blur-md text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border border-white/15 shadow-xs">
             Prenda Única
           </span>
@@ -42,20 +46,38 @@ export const ProductCard = memo<ProductCardProps>(({
           </span>
         </div>
 
-        {/* Size Badge — Oro Champaña sutil */}
-        <div className="absolute top-3 right-3">
+        {/* Top Right: Size Badge and Favorite Button */}
+        <div className="absolute top-3 right-3 flex items-center gap-1.5 z-10">
           <span className="bg-white/95 text-[#1A1A1A] font-bold text-xs px-3 py-1 rounded-full shadow-xs border border-[#C5A880]/60">
             {product.size}
           </span>
+          {onToggleFavorite && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleFavorite(product);
+              }}
+              className={`w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-xs ${
+                isFavorite
+                  ? 'bg-rose-50 text-rose-500 border border-rose-200 scale-105'
+                  : 'bg-white/80 hover:bg-white text-[#1A1A1A] border border-[#E8E6E1]'
+              }`}
+              title={isFavorite ? "Quitar de favoritos" : "Guardar en favoritos"}
+              aria-label={isFavorite ? "Quitar de favoritos" : "Guardar en favoritos"}
+            >
+              <Heart className={`w-3.5 h-3.5 ${isFavorite ? 'fill-rose-500 text-rose-500' : ''}`} />
+            </button>
+          )}
         </div>
 
         {/* Quick View Floating Button on Hover */}
         <button
           onClick={() => onOpenDetail(product)}
-          className="absolute bottom-3 left-3 right-3 py-2.5 px-4 rounded-xl bg-white/95 text-[#1A1A1A] font-semibold text-xs shadow-md flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0 cursor-pointer border border-[#E8E6E1] hover:border-[#C5A880]"
+          className="absolute bottom-3 left-3 right-3 py-2.5 px-4 rounded-xl bg-white/95 text-[#1A1A1A] font-semibold text-xs shadow-md flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all transform translate-y-2 group-hover:translate-y-0 cursor-pointer border border-[#E8E6E1] hover:border-[#C5A880] z-10"
         >
           <Ruler className="w-3.5 h-3.5 text-[#C5A880]" />
-          <span>Ver Medidas y Detalles</span>
+          <span>Ver Medidas y Fotos</span>
         </button>
       </div>
 
@@ -79,7 +101,7 @@ export const ProductCard = memo<ProductCardProps>(({
           </p>
         </div>
 
-        {/* Price & Action Buttons — Regla 80/15/5 */}
+        {/* Price & Action Buttons */}
         <div className="mt-4 pt-3 border-t border-[#EDEBE6] flex flex-col gap-2.5">
           <div className="flex items-baseline justify-between">
             <span className="text-[10px] text-[#7A7A7A] uppercase tracking-wider font-semibold">Precio Final</span>
@@ -98,7 +120,6 @@ export const ProductCard = memo<ProductCardProps>(({
             </button>
           ) : (
             <div className="grid grid-cols-2 gap-2">
-              {/* Botón Secundario con Acento Oro Champaña */}
               <button
                 onClick={() => onAddToCart(product)}
                 className="py-2.5 px-2 rounded-xl border border-[#C5A880] hover:bg-[#FBFBF9] active:scale-95 text-[#1A1A1A] text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
@@ -107,7 +128,6 @@ export const ProductCard = memo<ProductCardProps>(({
                 <ShoppingBag className="w-3.5 h-3.5 text-[#C5A880] shrink-0" />
                 <span>Agregar</span>
               </button>
-              {/* Botón Primario Negro Suave */}
               <button
                 onClick={() => onBuyNow ? onBuyNow(product) : onAddToCart(product)}
                 className="py-2.5 px-2 rounded-xl bg-[#1A1A1A] hover:bg-black active:scale-95 text-white text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-1 cursor-pointer"

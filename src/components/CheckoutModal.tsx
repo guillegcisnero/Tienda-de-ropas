@@ -26,6 +26,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     name: '',
     phone: '',
     email: '',
+    province: shipping.province || 'CABA',
     address: '',
     postalCode: ''
   });

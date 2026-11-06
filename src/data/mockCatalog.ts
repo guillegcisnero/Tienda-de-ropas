@@ -35,6 +35,12 @@ export const MOCK_CATALOG: Product[] = [
     price: 28500,
     weightGrams: 750,
     image: "https://images.unsplash.com/photo-1544441893-675973e31985?w=600&auto=format&fit=crop&q=80",
+    images: [
+      "https://images.unsplash.com/photo-1544441893-675973e31985?w=1000&auto=format&fit=crop&q=80",
+      "https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=1000&auto=format&fit=crop&q=80",
+      "https://images.unsplash.com/photo-1543087903-1ac2ec7aa8c5?w=1000&auto=format&fit=crop&q=80",
+      "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=1000&auto=format&fit=crop&q=80"
+    ],
     isSinglePiece: true,
     available: true,
     createdAt: "2026-10-15"
@@ -57,6 +63,11 @@ export const MOCK_CATALOG: Product[] = [
     price: 17500,
     weightGrams: 300,
     image: "https://images.unsplash.com/photo-1522771930-78848d9293e8?w=600&auto=format&fit=crop&q=80",
+    images: [
+      "https://images.unsplash.com/photo-1522771930-78848d9293e8?w=1000&auto=format&fit=crop&q=80",
+      "https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=1000&auto=format&fit=crop&q=80",
+      "https://images.unsplash.com/photo-1503919545889-aef636e10ad4?w=1000&auto=format&fit=crop&q=80"
+    ],
     isSinglePiece: true,
     available: true,
     createdAt: "2026-10-20"
@@ -79,6 +90,11 @@ export const MOCK_CATALOG: Product[] = [
     price: 24900,
     weightGrams: 620,
     image: "https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=600&auto=format&fit=crop&q=80",
+    images: [
+      "https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=1000&auto=format&fit=crop&q=80",
+      "https://images.unsplash.com/photo-1509967419530-da38b4704bc6?w=1000&auto=format&fit=crop&q=80",
+      "https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=1000&auto=format&fit=crop&q=80"
+    ],
     isSinglePiece: true,
     available: true,
     createdAt: "2026-10-18"
