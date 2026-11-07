@@ -19,12 +19,15 @@ export interface LegalSection {
 
 export const LEGAL_CONFIG = {
   storeName: 'ESVEN',
-  legalEntity: '[RAZÓN SOCIAL / NOMBRE DEL TITULAR]',
-  cuit: '[XX-XXXXXXXX-X]',
-  legalAddress: '[DOMICILIO LEGAL EN CABA / PROVINCIA, ARGENTINA]',
+  parentCompany: 'Icariel System',
+  legalEntity: 'Guillermo Cisnero (Titular de Icariel System & ESVEN)',
+  cuit: '[XX-XXXXXXXX-X]', // A completar con el CUIT real del titular
+  cuitStatusText: 'Responsable Monotributista — ARCA',
+  legalAddress: 'Provincia de Buenos Aires, República Argentina',
   contactEmail: 'legales@esven.com.ar',
-  contactPhone: '+54 9 11 0000-0000',
-  jurisdiction: 'Ciudad Autónoma de Buenos Aires, República Argentina',
+  parentLegalEmail: 'legales@icarielsystem.com.ar',
+  contactPhone: '+54 9 11 3037-8139',
+  jurisdiction: 'Tribunales Ordinarios en lo Comercial de la Capital Federal y Provincia de Buenos Aires (y fueros de consumo aplicables)',
   lastUpdated: 'Noviembre 2026'
 };
 
@@ -32,7 +35,7 @@ export const TERMS_AND_CONDITIONS: LegalSection[] = [
   {
     id: 'introduccion',
     title: '1. Ámbito de Aplicación y Aceptación',
-    content: `El presente contrato regula los términos y condiciones generales aplicables al uso de los servicios ofrecidos por ${LEGAL_CONFIG.storeName} (marca operada por ${LEGAL_CONFIG.legalEntity}, CUIT ${LEGAL_CONFIG.cuit}, con domicilio en ${LEGAL_CONFIG.legalAddress}), a través de su sitio web oficial.
+    content: `El presente contrato regula los términos y condiciones generales aplicables al uso de la plataforma y compras concretadas en ${LEGAL_CONFIG.storeName} (marca comercial y unidad de e-commerce de moda circular perteneciente al ecosistema ${LEGAL_CONFIG.parentCompany}, operada legalmente por ${LEGAL_CONFIG.legalEntity}, CUIT ${LEGAL_CONFIG.cuit}, con domicilio en ${LEGAL_CONFIG.legalAddress}), a través de su sitio web oficial.
 
 Toda persona que acceda, navegue o complete una transacción comercial en la plataforma acepta de manera plena, expresa y sin reservas los presentes Términos y Condiciones, así como la Política de Privacidad y el Régimen de Devoluciones y Garantías. Quien no acepte estos términos de adhesión obligatorios deberá abstenerse de utilizar el sitio web.`
   },
@@ -70,7 +73,7 @@ El plazo de entrega informado es de carácter estimado y se computa en días há
   {
     id: 'propiedad-intelectual',
     title: '6. Propiedad Intelectual y Enlaces',
-    content: `Los contenidos del sitio web, incluyendo logotipos, isotipos, arquitectura de software, diseños, código fuente, compilaciones y estética editorial son de propiedad exclusiva de ${LEGAL_CONFIG.storeName} y ${LEGAL_CONFIG.legalEntity}, encontrándose protegidos por las leyes de propiedad intelectual y marcas de la República Argentina y tratados internacionales.`
+    content: `Los contenidos del sitio web, incluyendo logotipos, isotipos, arquitectura de software, diseños, código fuente, compilaciones y estética editorial son de propiedad exclusiva de ${LEGAL_CONFIG.storeName}, ${LEGAL_CONFIG.parentCompany} y su titular legal ${LEGAL_CONFIG.legalEntity}, encontrándose protegidos por las leyes de propiedad intelectual y marcas de la República Argentina (Ley 11.723 y Ley 22.362) y tratados internacionales.`
   },
   {
     id: 'jurisdiccion',

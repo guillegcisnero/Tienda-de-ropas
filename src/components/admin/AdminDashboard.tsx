@@ -74,7 +74,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session?.user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
           setIsAuthenticated(true);
-          setAdminUserEmail(session.user.email);
+          setAdminUserEmail(session.user.email || null);
         } else {
           setIsAuthenticated(false);
         }
@@ -83,7 +83,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
         if (session?.user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
           setIsAuthenticated(true);
-          setAdminUserEmail(session.user.email);
+          setAdminUserEmail(session?.user?.email || null);
         } else {
           setIsAuthenticated(false);
           setAdminUserEmail(null);
@@ -107,73 +107,55 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   }, [isAuthenticated]);
 
-  // Handler de login seguro con Email + Clave Secreta
+  // Handler de login seguro con Email + Clave Secreta (Anti-Enumeration & Anti-Timing Attack)
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanEmail = emailInput.trim();
     const cleanPassword = passwordInput.trim();
 
     if (!cleanEmail || !cleanPassword) {
-      setAuthError('Por favor completá tu email personal y la clave secreta.');
-      return;
-    }
-
-    if (cleanEmail.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
-      setAuthError('Acceso denegado: este email no posee permisos de administrador.');
+      setAuthError('Por favor completá todos los campos requeridos.');
       return;
     }
 
     setIsSubmittingAuth(true);
     setAuthError(null);
 
+    const startTime = Date.now();
+    const MIN_AUTH_DELAY_MS = 600; // Normalización de tiempo de respuesta contra Timing Attacks
+
     try {
+      // Verificación estricta de identidad administrativa
+      if (cleanEmail.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+        throw new Error('UNAUTHORIZED');
+      }
+
       if (isSupabaseConfigured && supabase) {
-        // 1. Intentar iniciar sesión
+        // Intentar iniciar sesión única y exclusivamente vía credenciales existentes
         const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
           email: cleanEmail,
           password: cleanPassword
         });
 
-        if (!signInError && signInData.session) {
-          setIsAuthenticated(true);
-          setAdminUserEmail(signInData.session.user.email || ADMIN_EMAIL);
-          return;
+        if (signInError || !signInData.session) {
+          throw new Error('INVALID_CREDENTIALS');
         }
 
-        // 2. Si el usuario aún no fue registrado en Supabase Auth, registrar la clave elegida
-        if (signInError && (
-          signInError.message.toLowerCase().includes('invalid login credentials') ||
-          signInError.message.toLowerCase().includes('user not found')
-        )) {
-          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-            email: cleanEmail,
-            password: cleanPassword
-          });
-
-          if (signUpError) {
-            throw signUpError;
-          }
-
-          // Iniciar sesión con la clave confirmada automáticamente por la base de datos
-          const { data: retrySignIn, error: retryError } = await supabase.auth.signInWithPassword({
-            email: cleanEmail,
-            password: cleanPassword
-          });
-
-          if (!retryError && retrySignIn.session) {
-            setIsAuthenticated(true);
-            setAdminUserEmail(retrySignIn.session.user.email || ADMIN_EMAIL);
-            return;
-          }
-        }
-
-        throw signInError || new Error('Credenciales incorrectas. Verificá tu clave.');
+        setIsAuthenticated(true);
+        setAdminUserEmail(signInData.session.user.email || ADMIN_EMAIL);
       } else {
+        // Modo demo local / sin backend
         setIsAuthenticated(true);
       }
-    } catch (err: any) {
-      setAuthError(err.message || 'Error de autenticación. Verificá tu email o clave secreta.');
+    } catch {
+      // Respuesta 100% uniforme contra Enumeración de Usuarios (OWASP ASVS)
+      setAuthError('Credenciales incorrectas o acceso no autorizado.');
     } finally {
+      // Asegurar retardo uniforme independientemente de si el usuario existía o no
+      const elapsed = Date.now() - startTime;
+      if (elapsed < MIN_AUTH_DELAY_MS) {
+        await new Promise(resolve => setTimeout(resolve, MIN_AUTH_DELAY_MS - elapsed));
+      }
       setIsSubmittingAuth(false);
     }
   };

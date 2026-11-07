@@ -58,7 +58,10 @@ CREATE TABLE IF NOT EXISTS public.orders (
     gateway_payment_id TEXT,
     payment_status TEXT NOT NULL DEFAULT 'pending',
     items JSONB NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT check_positive_total CHECK (total_amount >= 0),
+    CONSTRAINT check_valid_gateway CHECK (gateway IN ('mercadopago', 'whatsapp')),
+    CONSTRAINT check_valid_payment_status CHECK (payment_status IN ('pending', 'approved', 'paid', 'cancelled', 'rejected'))
 );
 
 -- 3.1 TABLA DE FAVORITOS (WISHLIST DE USUARIOS)
@@ -101,10 +104,14 @@ CREATE POLICY "Users can manage own favorites" ON public.favorites
     FOR ALL USING (auth.uid() = user_id)
     WITH CHECK (auth.uid() = user_id);
 
--- Órdenes: Inserción permitida para checkout público sin exponer datos de terceros
+-- Órdenes: Inserción permitida para checkout con validación estricta de estructura
 DROP POLICY IF EXISTS "Public Insert Orders" ON public.orders;
 CREATE POLICY "Public Insert Orders" ON public.orders
-    FOR INSERT WITH CHECK (true);
+    FOR INSERT WITH CHECK (
+        total_amount >= 0 AND
+        gateway IN ('mercadopago', 'whatsapp') AND
+        jsonb_typeof(items) = 'array'
+    );
 
 -- Órdenes: Lectura y gestión restringida estrictamente al administrador (prohibido a la anon key pública)
 DROP POLICY IF EXISTS "Admin Read Orders" ON public.orders;
@@ -122,26 +129,50 @@ CREATE POLICY "Admin Manage Orders" ON public.orders
     );
 
 -- 4.1 BUCKET DE FOTOS DE PRENDAS (STORAGE)
+-- Bucket público para lectura de imágenes, con permisos de escritura restringidos a admin
 INSERT INTO storage.buckets (id, name, public) 
 VALUES ('products', 'products', true)
 ON CONFLICT (id) DO UPDATE SET public = true;
 
--- Políticas de Storage para acceso y subida pública de imágenes de catálogo
+-- Lectura pública de imágenes de productos del catálogo
 DROP POLICY IF EXISTS "Public Storage Read" ON storage.objects;
 CREATE POLICY "Public Storage Read" ON storage.objects
     FOR SELECT USING (bucket_id = 'products');
 
+-- REGLAS DE SEGURIDAD ESTRICTAS (Cero permisos anónimos de modificación/borrado)
 DROP POLICY IF EXISTS "Public Storage Upload" ON storage.objects;
-CREATE POLICY "Public Storage Upload" ON storage.objects
-    FOR INSERT WITH CHECK (bucket_id = 'products');
-
 DROP POLICY IF EXISTS "Public Storage Update" ON storage.objects;
-CREATE POLICY "Public Storage Update" ON storage.objects
-    FOR UPDATE USING (bucket_id = 'products');
-
 DROP POLICY IF EXISTS "Public Storage Delete" ON storage.objects;
-CREATE POLICY "Public Storage Delete" ON storage.objects
-    FOR DELETE USING (bucket_id = 'products');
+
+DROP POLICY IF EXISTS "Admin Storage Upload" ON storage.objects;
+CREATE POLICY "Admin Storage Upload" ON storage.objects
+    FOR INSERT WITH CHECK (
+        bucket_id = 'products' AND (
+            auth.jwt() ->> 'email' = 'guillegcisnero@gmail.com' 
+            OR auth.role() = 'service_role'
+            OR (auth.jwt() -> 'app_metadata' ->> 'role') = 'admin'
+        )
+    );
+
+DROP POLICY IF EXISTS "Admin Storage Update" ON storage.objects;
+CREATE POLICY "Admin Storage Update" ON storage.objects
+    FOR UPDATE USING (
+        bucket_id = 'products' AND (
+            auth.jwt() ->> 'email' = 'guillegcisnero@gmail.com' 
+            OR auth.role() = 'service_role'
+            OR (auth.jwt() -> 'app_metadata' ->> 'role') = 'admin'
+        )
+    );
+
+DROP POLICY IF EXISTS "Admin Storage Delete" ON storage.objects;
+CREATE POLICY "Admin Storage Delete" ON storage.objects
+    FOR DELETE USING (
+        bucket_id = 'products' AND (
+            auth.jwt() ->> 'email' = 'guillegcisnero@gmail.com' 
+            OR auth.role() = 'service_role'
+            OR (auth.jwt() -> 'app_metadata' ->> 'role') = 'admin'
+        )
+    );
 
 -- 4.2 HABILITAR SUPABASE REALTIME (WEBSOCKETS)
 DO $$

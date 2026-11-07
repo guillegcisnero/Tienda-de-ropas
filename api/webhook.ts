@@ -1,8 +1,50 @@
+import crypto from 'crypto';
+
 /**
- * Webhook IPN de Mercado Pago
- * Recibe eventos de pago y consolida el estado final en Supabase (si está configurado)
+ * Webhook IPN de Mercado Pago con Verificación Criptográfica (HMAC-SHA256)
+ * Recibe eventos de pago y consolida el estado final en Supabase
  * Compatible con Vercel Serverless Functions
  */
+
+function verifyMercadoPagoSignature(
+  xSignature: string | undefined,
+  xRequestId: string | undefined,
+  dataId: string | undefined,
+  secretKey: string
+): boolean {
+  if (!xSignature || !secretKey) return false;
+
+  try {
+    // x-signature format: "ts=1704067200,v1=abc123def456..."
+    const parts = xSignature.split(',').reduce((acc: Record<string, string>, curr: string) => {
+      const [key, value] = curr.split('=');
+      if (key && value) acc[key.trim()] = value.trim();
+      return acc;
+    }, {});
+
+    const ts = parts['ts'];
+    const hash = parts['v1'];
+
+    if (!ts || !hash) return false;
+
+    // Mercado Pago Template: id:[data.id_url];request-id:[x-request-id];ts:[ts];
+    // Nota: si dataId no está presente en query/body, se valida con lo disponible
+    const manifest = `id:${dataId || ''};request-id:${xRequestId || ''};ts:${ts};`;
+    
+    const hmac = crypto.createHmac('sha256', secretKey);
+    hmac.update(manifest);
+    const calculatedHash = hmac.digest('hex');
+
+    // Comparación criptográfica en tiempo constante (Anti-Timing Attacks)
+    return crypto.timingSafeEqual(
+      Buffer.from(calculatedHash, 'utf8'),
+      Buffer.from(hash, 'utf8')
+    );
+  } catch (err) {
+    console.error('[Security Warning] Error verificando firma de webhook:', err);
+    return false;
+  }
+}
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
@@ -21,6 +63,19 @@ export default async function handler(req: any, res: any) {
     return res.status(400).json({ error: 'Missing payment ID' });
   }
 
+  // 1. Verificación Criptográfica de la Firma del Webhook
+  const webhookSecret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
+  if (webhookSecret) {
+    const xSignature = req.headers['x-signature'] as string | undefined;
+    const xRequestId = req.headers['x-request-id'] as string | undefined;
+    const isValid = verifyMercadoPagoSignature(xSignature, xRequestId, String(paymentId), webhookSecret);
+
+    if (!isValid) {
+      console.warn(`[Security Alert] Intento de webhook con firma HMAC inválida. Payment ID: ${paymentId}`);
+      return res.status(401).json({ error: 'Invalid HMAC signature' });
+    }
+  }
+
   console.log(`[Mercado Pago Webhook] Procesando evento para pago ID: ${paymentId}`);
 
   const mpAccessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
@@ -33,7 +88,7 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    // 1. Consultar estado fehaciente del pago en Mercado Pago
+    // 2. Consultar estado fehaciente del pago en la API oficial de Mercado Pago (Zero-Trust)
     const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
       headers: {
         'Authorization': `Bearer ${mpAccessToken}`
@@ -47,18 +102,17 @@ export default async function handler(req: any, res: any) {
 
     const paymentData = await mpRes.json();
     const status = paymentData.status; // 'approved', 'rejected', 'pending', etc.
-    const externalReference = paymentData.external_reference; // ID de orden o prenda
+    const externalReference = paymentData.external_reference; // IDs de prendas
 
-    console.log(`[Mercado Pago Webhook] Pago ${paymentId} verificado: estado '${status}'`);
+    console.log(`[Mercado Pago Webhook] Pago ${paymentId} verificado fehacientemente: estado '${status}'`);
 
-    // 2. Si el pago fue aprobado y Supabase está configurado, marcar como 'sold'
+    // 3. Si el pago fue aprobado y Supabase está configurado, marcar como 'sold'
     if (status === 'approved' && supabaseUrl && supabaseKey) {
       const { createClient } = await import('@supabase/supabase-js');
       const supabase = createClient(supabaseUrl, supabaseKey);
 
-      // Si external_reference contiene IDs de productos separados por coma
       if (externalReference) {
-        const productIds = externalReference.split(',').map((s: string) => s.trim());
+        const productIds = externalReference.split(',').map((s: string) => s.trim()).filter(Boolean);
         await supabase
           .from('products')
           .update({
@@ -75,7 +129,7 @@ export default async function handler(req: any, res: any) {
     return res.status(200).json({ received: true, status, paymentId });
   } catch (err: any) {
     console.error('[Mercado Pago Webhook] Excepción no controlada:', err);
-    // Respondemos 200 para evitar que Mercado Pago reintente en bucle en caso de error interno
+    // Respondemos 200 para evitar que Mercado Pago reintente en bucle en caso de error interno transitorio
     return res.status(200).json({ received: true, error: err.message });
   }
 }

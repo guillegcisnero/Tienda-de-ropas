@@ -181,16 +181,31 @@ export const ProductDrawer: React.FC<ProductDrawerProps> = ({
     setIsUploadingImages(true);
     setUploadError(null);
 
+    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
+    const ALLOWED_EXTS = ['jpg', 'jpeg', 'png', 'webp', 'avif'];
+    const MAX_SIZE_BYTES = 6 * 1024 * 1024; // 6MB máx por imagen
+
     try {
       const uploadedUrls: string[] = [];
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+
+        // 1. Verificación estricta de tipo MIME y tamaño
+        if (!ALLOWED_TYPES.includes(file.type)) {
+          throw new Error(`El archivo "${file.name}" no es una imagen válida (formatos permitidos: JPG, PNG, WEBP, AVIF).`);
+        }
+        if (file.size > MAX_SIZE_BYTES) {
+          throw new Error(`La imagen "${file.name}" excede el límite permitido de 6 MB.`);
+        }
+
+        const rawExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+        const fileExt = ALLOWED_EXTS.includes(rawExt) ? rawExt : 'jpg';
         const cleanName = `${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
 
         const { error: uploadErr } = await supabase.storage
           .from('products')
           .upload(cleanName, file, {
+            contentType: file.type,
             cacheControl: '3600',
             upsert: false
           });
