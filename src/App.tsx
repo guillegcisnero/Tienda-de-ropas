@@ -356,7 +356,6 @@ export default function App() {
         {isCartOpen && (
           <CartDrawer 
             isOpen={isCartOpen}
-            cart={cart}
             availableItems={availableItems}
             unavailableItems={unavailableItems}
             shipping={shipping}

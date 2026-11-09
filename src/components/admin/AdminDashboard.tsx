@@ -74,7 +74,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session?.user?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
           setIsAuthenticated(true);
-          setAdminUserEmail(session.user.email || null);
+          setAdminUserEmail(session?.user?.email || null);
         } else {
           setIsAuthenticated(false);
         }
@@ -353,6 +353,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       }}
       activeProductsCount={activeProductsCount}
       pendingOrdersCount={pendingOrdersCount}
+      isSupabaseLive={isSupabaseConfigured && Boolean(supabase)}
     >
       {/* Toast Notice de éxito */}
       {successNotice && (
@@ -373,10 +374,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <DashboardOverview 
           products={products}
           orders={orders}
-          onOpenNewProduct={handleOpenCreateDrawer}
-          onSelectOrder={(order) => {
-            setCurrentSection('orders');
-          }}
+          onNavigateToSection={setCurrentSection}
+          onOpenNewProductDrawer={handleOpenCreateDrawer}
         />
       )}
 
@@ -384,9 +383,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <InventoryView
           products={products}
           onOpenCreateDrawer={handleOpenCreateDrawer}
-          onEditProduct={handleOpenEditDrawer}
-          onToggleSold={handleToggleSold}
+          onOpenEditDrawer={handleOpenEditDrawer}
+          onToggleAvailability={handleToggleSold}
           onDeleteProduct={handleDelete}
+          externalSearch={globalSearch}
         />
       )}
 

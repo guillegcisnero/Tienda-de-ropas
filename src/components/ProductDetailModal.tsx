@@ -306,13 +306,18 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 {product.name}
               </h2>
 
-              <div className="flex items-center gap-3 my-3">
+              <div className="flex items-center gap-3 my-3 flex-wrap">
                 <span className="font-serif text-2xl font-bold text-[#1A1A1A] dark:text-[#F5F5F0]">
                   {formatPrice(product.price)}
                 </span>
                 <span className="text-xs bg-[#FBFBF9] dark:bg-[#1E1E1C] border border-[#E8E6E1] dark:border-[#282826] text-[#1A1A1A] dark:text-[#F5F5F0] font-semibold px-2.5 py-1 rounded-full">
                   Estado: {product.condition}
                 </span>
+                {(product.status === 'reserved' || (!product.available && product.status !== 'sold')) && (
+                  <span className="text-xs bg-[#242422] dark:bg-[#181816] border border-white/10 text-[#E8E6E1] font-medium px-2.5 py-1 rounded-full">
+                    En proceso de compra
+                  </span>
+                )}
               </div>
 
               <p className="text-xs sm:text-sm text-[#5A5A5A] dark:text-[#A8A69E] leading-relaxed font-light mb-5">
@@ -361,6 +366,13 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 >
                   <Check className="w-4 h-4 text-[#C5A880]" />
                   <span>Esta prenda única ya está en tu carrito</span>
+                </button>
+              ) : product.status === 'reserved' || (!product.available && product.status !== 'sold') ? (
+                <button
+                  disabled
+                  className="w-full py-3.5 px-6 rounded-xl bg-[#F4F4F0] dark:bg-[#1C1C1A] text-[#8C8C88] dark:text-[#7A7A76] border border-[#E5E3DC] dark:border-[#2A2A28] font-medium text-sm cursor-not-allowed flex items-center justify-center gap-2 select-none"
+                >
+                  <span>En proceso de compra por otro cliente</span>
                 </button>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

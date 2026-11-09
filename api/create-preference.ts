@@ -75,8 +75,12 @@ export default async function handler(req: any, res: any) {
     let mpItems: Array<{ id: string; title: string; unit_price: number; quantity: number; currency_id: string }> = [];
 
     // ========================================================
-    // BLINDAJE ANTI-TAMPERING: VERIFICAR PRECIOS EN SUPABASE
+    // BLINDAJE ANTI-TAMPERING & RESERVA ATÓMICA CON TTL (15 MIN)
     // ========================================================
+    const now = new Date();
+    const TTL_MINUTES = 15;
+    const expiresAt = new Date(now.getTime() + TTL_MINUTES * 60 * 1000);
+
     if (supabaseUrl && supabaseKey) {
       const { createClient } = await import('@supabase/supabase-js');
       const supabase = createClient(supabaseUrl, supabaseKey);
@@ -85,7 +89,7 @@ export default async function handler(req: any, res: any) {
 
       const { data: dbProducts, error: dbError } = await supabase
         .from('products')
-        .select('id, title, price, status')
+        .select('id, title, price, status, reserved_until')
         .in('id', productIds);
 
       if (dbError) {
@@ -100,11 +104,36 @@ export default async function handler(req: any, res: any) {
       }
 
       // Validar disponibilidad de stock (moda circular 1/1)
-      const unavailable = dbProducts.filter(p => p.status !== 'available');
+      const isCurrentlyReserved = (p: any) => {
+        if (p.status === 'reserved' && p.reserved_until) {
+          return new Date(p.reserved_until).getTime() > now.getTime();
+        }
+        return false;
+      };
+
+      const unavailable = dbProducts.filter(p => p.status === 'sold' || p.status === 'archived' || isCurrentlyReserved(p));
       if (unavailable.length > 0) {
         return res.status(409).json({
-          error: 'Una o más prendas ya han sido reservadas o vendidas.',
+          error: 'Una o más prendas están en proceso de compra por otro cliente o ya fueron vendidas.',
           unavailableItems: unavailable.map(u => u.title)
+        });
+      }
+
+      // Reserva atómica con TTL de 15 minutos en Supabase
+      const { data: reservedProducts, error: reserveError } = await supabase
+        .from('products')
+        .update({
+          status: 'reserved',
+          reserved_until: expiresAt.toISOString(),
+          updated_at: now.toISOString()
+        })
+        .in('id', productIds)
+        .select('id, title');
+
+      if (reserveError || !reservedProducts || reservedProducts.length !== productIds.length) {
+        console.error('[Reservation Conflict] No se pudo concretar el bloqueo temporal:', reserveError);
+        return res.status(409).json({
+          error: 'Conflicto de stock: una o más prendas acaban de ser reservadas por otro comprador.'
         });
       }
 
@@ -189,7 +218,9 @@ export default async function handler(req: any, res: any) {
     return res.status(200).json({
       id: mpData.id,
       init_point: mpData.init_point,
-      sandbox_init_point: mpData.sandbox_init_point
+      sandbox_init_point: mpData.sandbox_init_point,
+      reservationExpiresAt: expiresAt.toISOString(),
+      reservedProductIds: items.map(i => i.id)
     });
 
   } catch (err: any) {

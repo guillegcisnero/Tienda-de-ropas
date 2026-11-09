@@ -36,11 +36,17 @@ export const ProductCard = memo<ProductCardProps>(({
         {/* Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
 
-        {/* Single Piece Badge */}
+        {/* Single Piece / Reserved Badge */}
         <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10 pointer-events-none">
-          <span className="bg-[#1A1A1A]/85 dark:bg-black/85 backdrop-blur-md text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border border-white/15 shadow-xs">
-            Prenda Única
-          </span>
+          {product.status === 'reserved' || (!product.available && product.status !== 'sold') ? (
+            <span className="bg-[#242422]/90 dark:bg-[#181816]/90 backdrop-blur-md text-[#E8E6E1] text-[10px] font-medium tracking-wide px-2.5 py-1 rounded-full border border-white/10 shadow-xs">
+              En proceso de compra
+            </span>
+          ) : (
+            <span className="bg-[#1A1A1A]/85 dark:bg-black/85 backdrop-blur-md text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border border-white/15 shadow-xs">
+              Prenda Única
+            </span>
+          )}
           <span className="bg-[#FBFBF9]/90 dark:bg-[#1E1E1C]/90 backdrop-blur-md text-[#1A1A1A] dark:text-[#F5F5F0] text-[10px] font-semibold px-2 py-0.5 rounded-full border border-[#E8E6E1] dark:border-[#282826] shadow-xs">
             {product.condition}
           </span>
@@ -117,6 +123,13 @@ export const ProductCard = memo<ProductCardProps>(({
             >
               <Check className="w-4 h-4 text-[#C5A880]" />
               <span>En Carrito</span>
+            </button>
+          ) : product.status === 'reserved' || (!product.available && product.status !== 'sold') ? (
+            <button
+              disabled
+              className="w-full py-2.5 px-3 rounded-xl bg-[#F4F4F0] dark:bg-[#1C1C1A] text-[#8C8C88] dark:text-[#7A7A76] border border-[#E5E3DC] dark:border-[#2A2A28] text-xs font-medium flex items-center justify-center gap-1.5 cursor-not-allowed select-none"
+            >
+              <span>En proceso de compra</span>
             </button>
           ) : (
             <div className="grid grid-cols-2 gap-2">

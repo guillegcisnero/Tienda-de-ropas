@@ -6,10 +6,12 @@ interface CreatePreferenceParams {
   buyer: BuyerInfo;
 }
 
-interface PreferenceResult {
+export interface PreferenceResult {
   initPoint?: string;
   isSimulated?: boolean;
   message?: string;
+  reservationExpiresAt?: string;
+  reservedProductIds?: string[];
 }
 
 /**
@@ -41,11 +43,34 @@ export async function createPaymentPreference({
 
   const data = await response.json();
   if (data.init_point) {
-    return { initPoint: data.init_point };
+    return { 
+      initPoint: data.init_point,
+      reservationExpiresAt: data.reservationExpiresAt,
+      reservedProductIds: data.reservedProductIds
+    };
   }
 
   return {
     isSimulated: true,
-    message: data.message || 'Modo simulado activo'
+    message: data.message || 'Modo simulado activo',
+    reservationExpiresAt: data.reservationExpiresAt,
+    reservedProductIds: data.reservedProductIds
   };
+}
+
+/**
+ * Libera reservas de prendas si el usuario cancela o expira el checkout
+ */
+export async function releasePaymentReservation(productIds: string[]): Promise<boolean> {
+  if (!productIds || productIds.length === 0) return true;
+  try {
+    const res = await fetch('/api/release-reservation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ productIds })
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
 }

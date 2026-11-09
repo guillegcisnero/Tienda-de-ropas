@@ -4,6 +4,39 @@ Este documento registra cronológicamente los hitos, refactorizaciones y avances
 
 ---
 
+### [2026-11-08 23:20] — Implementación Integral de Arbitraje de Stock 1/1 y Checkout Seguro (Punto 4)
+- **Fase 1 (Backend & Reserva Atómica / Fury & Viernes):**
+  - Modificado `api/create-preference.ts`: implementado bloqueo atómico condicional en Supabase (`status = 'reserved'`, `reserved_until = NOW() + 15 min`) antes de invocar la API de Mercado Pago. Si una prenda no está disponible o tiene reserva vigente, responde 409 Conflict.
+  - Creado `api/release-reservation.ts`: endpoint serverless para liberar prendas reservadas si el comprador cancela o expira el checkout.
+  - Actualizado `api/webhook.ts`: libera prendas a `available` ante eventos `rejected` o `cancelled`, y consolida a `sold` con `reserved_until = null` al acreditarse el pago.
+  - Actualizado `src/services/payment.ts`: interfaces tipadas con `reservationExpiresAt` y método `releasePaymentReservation`.
+- **Fase 2 (Servicios & Fail-Safe / Tony & Viernes):**
+  - Modificado `src/services/catalogService.ts`: desbloqueo pasivo Just-in-Time (`release_expired_reservations`) al leer el catálogo. Mapeo condicional de prendas cuya reserva superó los 15 min como `available = true`.
+  - Fail-safe estricto para producción: `mockCatalog.ts` restringido a desarrollo local (`DEV`). En producción, si Supabase no está conectado o falla, devuelve estado de contingencia sin vender datos simulados.
+  - Actualizado `src/hooks/useCatalog.ts`: estado inicial vacío en producción y propagación de errores de conexión.
+- **Fase 3 (UI de Catálogo / Rhodey & Viernes):**
+  - Actualizado `src/components/ProductCard.tsx`: badge minimalista y sobrio `"En proceso de compra"` (sin etiquetas ámbar) y botones de compra deshabilitados con cursor `not-allowed`.
+  - Actualizado `src/components/ProductDetailModal.tsx`: estado reservado consistente en detalle y botones deshabilitados.
+- **Fase 4 (Checkout con Countdown / Viernes & Rhodey):**
+  - Modificado `src/components/CheckoutModal.tsx`: apertura de pasarela de Mercado Pago en nueva pestaña (`window.open(initPoint, '_blank')`) y despliegue inmediato de la pantalla de espera con temporizador regresivo (`15:00`).
+  - Botón táctil para verificar acreditación (`handleCheckPaymentStatus`) y botón para liberar prendas voluntariamente (`handleCancelReservation`). Manejo de expiración con aviso al comprador.
+- **Fase 5 (Auditoría & Compilación / Fury & Tony):**
+  - 0 errores TypeScript (`npm.cmd run lint` -> `tsc --noEmit`).
+  - Compilación de producción limpia (`npm.cmd run build` -> `dist/` generado en 1.73s).
+
+---
+
+### [2026-11-08 22:45] — Creación de GEMINI.md y Consolidación de Arquitectura Retail
+- **Regla Raíz GEMINI.md Implementada:**
+  - Creado [`GEMINI.md`](./GEMINI.md) como Fuente Operativa e Índice Ejecutivo del proyecto para Antigravity / Gemini CLI.
+  - Formalizado el rol activo de **Vision** (Tech Lead & E-commerce Architect) y la identidad de marca **ESVEN** (Moda Circular Vintage 1/1).
+  - Integrado el protocolo obligatorio para dilemas técnicos y decisiones de diseño (Opción A vs. Opción B + Recomendación de Vision).
+  - Clarificada la arquitectura de stock 1/1: pasarela principal automática vía Mercado Pago (webhook HMAC-SHA256 con pase a `'sold'`), reserva temporal TTL con countdown visible en checkout, y canal WhatsApp para soporte y atención post-venta.
+  - Formalizada la orquestación del escuadrón DevSecOps de 5 fases (`Viernes ➔ Fury ➔ Tony ➔ Rhodey ➔ Wanda`) más `Merchandiser`.
+  - Blindaje legal ratificado: Botón de Arrepentimiento (Res. 424/2020), Garantía de 90 días en indumentaria usada (Ley 24.240) y Agotamiento Marcario.
+
+---
+
 ### [2026-11-04 18:15] — Inicialización de Gobernanza y Escuadrón de Subagentes
 - **Estructura de Gobernanza Creada:**
   - `governance/system_persona.md`: Orquestador Vision (E-commerce Lead & Retail Tech Architect).

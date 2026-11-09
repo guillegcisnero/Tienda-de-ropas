@@ -124,6 +124,23 @@ export default async function handler(req: any, res: any) {
 
         console.log(`[Mercado Pago Webhook] Prendas [${productIds.join(', ')}] marcadas como 'sold' definitivamente.`);
       }
+    } else if ((status === 'rejected' || status === 'cancelled') && supabaseUrl && supabaseKey) {
+      if (externalReference) {
+        const { createClient } = await import('@supabase/supabase-js');
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        const productIds = externalReference.split(',').map((s: string) => s.trim()).filter(Boolean);
+        await supabase
+          .from('products')
+          .update({
+            status: 'available',
+            reserved_until: null,
+            updated_at: new Date().toISOString()
+          })
+          .in('id', productIds)
+          .eq('status', 'reserved');
+
+        console.log(`[Mercado Pago Webhook] Pago ${status}. Prendas [${productIds.join(', ')}] liberadas a 'available'.`);
+      }
     }
 
     return res.status(200).json({ received: true, status, paymentId });

@@ -5,15 +5,20 @@ import { fetchCatalogProducts, mapRowToProduct, DatabaseProductRow } from '../se
 import { supabase, isSupabaseConfigured } from '../services/supabase';
 
 export function useCatalog() {
-  const [products, setProducts] = useState<Product[]>(MOCK_CATALOG);
+  const [products, setProducts] = useState<Product[]>(() => {
+    return import.meta.env.PROD ? [] : MOCK_CATALOG;
+  });
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isLive, setIsLive] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
   const loadProducts = useCallback(async () => {
     setIsLoading(true);
-    const { products: loaded, isLive: live } = await fetchCatalogProducts();
+    setError(null);
+    const { products: loaded, isLive: live, error: err } = await fetchCatalogProducts();
     setProducts(loaded);
     setIsLive(live);
+    if (err) setError(err);
     setIsLoading(false);
   }, []);
 
@@ -54,6 +59,7 @@ export function useCatalog() {
     products,
     isLoading,
     isLive,
+    error,
     refreshCatalog: loadProducts,
   };
 }

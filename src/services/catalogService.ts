@@ -19,12 +19,22 @@ export interface DatabaseProductRow {
   compare_price?: number;
   images: string[];
   status: 'available' | 'reserved' | 'sold' | 'archived';
+  reserved_until?: string | null;
   is_single_piece: boolean;
   weight_grams?: number;
   created_at: string;
 }
 
 export function mapRowToProduct(row: DatabaseProductRow): Product {
+  const now = new Date();
+  const isExpiredReservation = 
+    row.status === 'reserved' && 
+    Boolean(row.reserved_until) && 
+    new Date(row.reserved_until!).getTime() < now.getTime();
+  
+  const effectiveStatus = isExpiredReservation ? 'available' : row.status;
+  const isAvailable = effectiveStatus === 'available';
+
   return {
     id: row.id,
     name: row.title,
@@ -40,37 +50,62 @@ export function mapRowToProduct(row: DatabaseProductRow): Product {
     image: (row.images && row.images.length > 0) ? row.images[0] : '',
     images: (row.images && row.images.length > 0) ? row.images : [],
     isSinglePiece: row.is_single_piece ?? true,
-    available: row.status === 'available',
+    available: isAvailable,
+    status: effectiveStatus,
+    reservedUntil: row.reserved_until,
     createdAt: row.created_at,
   };
 }
 
 /**
- * Obtiene el catálogo de productos.
+ * Obtiene el catálogo de productos con desbloqueo pasivo Just-in-Time y fail-safe de producción.
  * Si Supabase está configurado, consulta la tabla 'products'.
- * Si no está configurado o falla la red, recurre a MOCK_CATALOG como fallback transparente.
+ * En producción (PROD), si falla Supabase, activa estado de contingencia sin vender piezas ficticias.
+ * En desarrollo (DEV), recurre a MOCK_CATALOG.
  */
-export async function fetchCatalogProducts(): Promise<{ products: Product[]; isLive: boolean }> {
+export async function fetchCatalogProducts(): Promise<{ products: Product[]; isLive: boolean; error?: string }> {
+  const isProd = import.meta.env.PROD;
+
   if (!isSupabaseConfigured || !supabase) {
+    if (isProd) {
+      console.error('[CatalogService] Supabase no configurado en producción.');
+      return { products: [], isLive: false, error: 'Catálogo en mantenimiento temporal.' };
+    }
     return { products: MOCK_CATALOG, isLive: false };
   }
 
   try {
+    // Desbloqueo pasivo Just-in-Time en segundo plano
+    Promise.resolve(supabase.rpc('release_expired_reservations')).catch(() => {});
+
     const { data, error } = await supabase
       .from('products')
       .select('*')
       .in('status', ['available', 'reserved'])
       .order('created_at', { ascending: false });
 
-    if (error || !data || data.length === 0) {
-      console.warn('[CatalogService] Retornando mock por error o catálogo vacío:', error);
+    if (error) {
+      console.error('[CatalogService] Error consultando Supabase:', error);
+      if (isProd) {
+        return { products: [], isLive: false, error: 'No se pudo sincronizar el catálogo.' };
+      }
+      return { products: MOCK_CATALOG, isLive: false };
+    }
+
+    if (!data || data.length === 0) {
+      if (isProd) {
+        return { products: [], isLive: true };
+      }
       return { products: MOCK_CATALOG, isLive: false };
     }
 
     const products = (data as unknown as DatabaseProductRow[]).map(mapRowToProduct);
     return { products, isLive: true };
-  } catch (err) {
+  } catch (err: any) {
     console.error('[CatalogService] Excepción de conexión a Supabase:', err);
+    if (isProd) {
+      return { products: [], isLive: false, error: 'Error de conexión con el catálogo.' };
+    }
     return { products: MOCK_CATALOG, isLive: false };
   }
 }

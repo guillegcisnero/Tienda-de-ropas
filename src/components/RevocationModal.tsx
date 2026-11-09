@@ -61,7 +61,7 @@ export const RevocationModal: React.FC<RevocationModalProps> = ({ isOpen, onClos
     const text = encodeURIComponent(
       `Hola ESVEN, he emitido mi solicitud de arrepentimiento con el código *${generatedCode}* correspondiente al pedido *${orderCode}*. Deseo coordinar el envío de la etiqueta de devolución.`
     );
-    const cleanNumber = LEGAL_CONFIG.whatsappNumber.replace(/\D/g, '');
+    const cleanNumber = (LEGAL_CONFIG.contactPhone || '').replace(/\D/g, '');
     window.open(`https://wa.me/${cleanNumber}?text=${text}`, '_blank');
   };
 

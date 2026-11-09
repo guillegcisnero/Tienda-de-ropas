@@ -25,6 +25,8 @@ export interface Product {
   images?: string[];
   isSinglePiece: boolean;
   available: boolean;
+  status?: 'available' | 'reserved' | 'sold' | 'archived';
+  reservedUntil?: string | null;
   createdAt?: string;
 }
 
