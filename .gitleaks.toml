@@ -1,0 +1,42 @@
+# Configuración reforzada de Gitleaks para el Ecosistema Icariel
+[extend]
+useDefault = true
+
+# -------------------------------------------------------------------------
+# Reglas Específicas del Ecosistema Icariel
+# -------------------------------------------------------------------------
+
+# 1. Supabase Service Role Key (JWTs clásicos y nuevas claves sb_secret_)
+[[rules]]
+id = "supabase-service-role-key"
+description = "Supabase Service Role Key / Secret Master Key detectada"
+regex = '''(?i)(supabase[_-]?(?:service[_-]?role|secret|admin)[_-]?key|sb_secret)[a-z0-9_]*\s*[:=]\s*["']?([A-Za-z0-9_-]{20,}|eyJh[A-Za-z0-9._-]{50,})["']?'''
+keywords = ["supabase", "service_role", "sb_secret_"]
+
+# 2. Vercel Tokens (Personal Access Token o Project Token)
+[[rules]]
+id = "vercel-token"
+description = "Vercel Access Token o Deploy Token detectado"
+regex = '''(?i)(vercel[_-]?(?:token|api[_-]?key|secret))\s*[:=]\s*["']?([A-Za-z0-9]{24,32}|vercel_[A-Za-z0-9_-]{20,})["']?'''
+keywords = ["vercel"]
+
+# 3. Meta / WhatsApp Cloud API Tokens
+[[rules]]
+id = "meta-whatsapp-token"
+description = "Meta / WhatsApp Cloud API Access Token o App Secret detectado"
+regex = '''(?i)(whatsapp[_-]?(?:token|access[_-]?token)|meta[_-]?(?:app[_-]?secret|access[_-]?token))\s*[:=]\s*["']?(EAAB[A-Za-z0-9]{50,}|[a-f0-9]{32})["']?'''
+keywords = ["whatsapp", "meta"]
+
+# -------------------------------------------------------------------------
+# Exclusiones Seguras (Allowlist)
+# -------------------------------------------------------------------------
+[allowlist]
+description = "Archivos de configuración pública, documentación y plantillas permitidas"
+paths = [
+  '''\.vercel/.*''',
+  '''\.env\.example$''',
+  '''package-lock\.json$''',
+  '''node_modules/.*''',
+  '''dist/.*''',
+  '''build/.*'''
+]

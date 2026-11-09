@@ -1,0 +1,60 @@
+name: Security CI (Icariel Security Pipeline)
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 1. Escaneo de Secretos con Gitleaks (Fugas de claves en el PR)
+  # ---------------------------------------------------------------------------
+  gitleaks-scan:
+    name: Gitleaks Secret Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
+
+  # ---------------------------------------------------------------------------
+  # 2. Análisis Estático de Código Fuente con Semgrep (SAST)
+  # ---------------------------------------------------------------------------
+  semgrep-scan:
+    name: Semgrep SAST Scan
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+    if: (github.actor != 'dependabot[bot]')
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Run Semgrep Rules
+        run: semgrep scan --config auto --error
+
+  # ---------------------------------------------------------------------------
+  # 3. Escaneo de CVEs en dependencias con Google OSV-Scanner (SCA)
+  # ---------------------------------------------------------------------------
+  osv-scan:
+    name: OSV-Scanner Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Run Google OSV-Scanner
+        uses: google/osv-scanner-action@v1.9.2
+        with:
+          scan-args: |-
+            --recursive
+            --skip-git
+            ./
