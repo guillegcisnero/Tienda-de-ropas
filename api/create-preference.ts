@@ -31,6 +31,25 @@ interface RequestBody {
 // Control de concurrencia y Rate Limiting en memoria por IP (Mitigación DoS / Spam)
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 
+function resolveBaseUrl(): string | null {
+  const configured =
+    process.env.APP_URL ||
+    (process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : undefined) ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined);
+
+  if (configured) {
+    return configured.replace(/\/+$/, '');
+  }
+
+  if (process.env.NODE_ENV !== 'production') {
+    return 'http://localhost:3000';
+  }
+
+  return null;
+}
+
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -59,8 +78,8 @@ export default async function handler(req: any, res: any) {
   }
 
   const mpAccessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
-  const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   // Si aún no está configurado el Access Token en variables de entorno, devolvemos fallback simulado
   if (!mpAccessToken) {
@@ -71,90 +90,80 @@ export default async function handler(req: any, res: any) {
     });
   }
 
-  try {
-    let mpItems: Array<{ id: string; title: string; unit_price: number; quantity: number; currency_id: string }> = [];
+  // Fail-closed: con cobros reales activos, es obligatorio contar con Service Role y URL canónica
+  if (!supabaseUrl || !supabaseServiceKey) {
+    console.error('[Security Misconfiguration] Faltan SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY en entorno de pagos.');
+    return res.status(500).json({ error: 'Configuración del servidor de pagos incompleta.' });
+  }
 
+  const baseUrl = resolveBaseUrl();
+  if (!baseUrl) {
+    console.error('[Security Misconfiguration] Falta APP_URL / VERCEL_URL para back_urls y notification_url.');
+    return res.status(500).json({ error: 'Configuración de URL base incompleta en el servidor.' });
+  }
+
+  const productIds = Array.from(new Set(items.map(item => String(item.id).trim()).filter(Boolean)));
+  if (productIds.length === 0 || productIds.length !== items.length) {
+    return res.status(400).json({ error: 'Lista de prendas inválida o con IDs duplicados.' });
+  }
+
+  let reservedInDb = false;
+  let supabaseClient: any = null;
+
+  const rollbackReservation = async () => {
+    if (!reservedInDb || !supabaseClient) return;
+    try {
+      await supabaseClient
+        .from('products')
+        .update({
+          status: 'available',
+          reserved_until: null,
+          updated_at: new Date().toISOString()
+        })
+        .in('id', productIds)
+        .eq('status', 'reserved');
+      reservedInDb = false;
+    } catch (rollbackErr) {
+      console.error('[Rollback Error] No se pudo revertir la reserva tras fallo en MP:', rollbackErr);
+    }
+  };
+
+  try {
     // ========================================================
     // BLINDAJE ANTI-TAMPERING & RESERVA ATÓMICA CON TTL (15 MIN)
     // ========================================================
-    const now = new Date();
+    const nowDate = new Date();
     const TTL_MINUTES = 15;
-    const expiresAt = new Date(now.getTime() + TTL_MINUTES * 60 * 1000);
+    const expiresAt = new Date(nowDate.getTime() + TTL_MINUTES * 60 * 1000);
 
-    if (supabaseUrl && supabaseKey) {
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabase = createClient(supabaseUrl, supabaseKey);
+    const { createClient } = await import('@supabase/supabase-js');
+    supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
 
-      const productIds = items.map(item => String(item.id).trim()).filter(Boolean);
-
-      const { data: dbProducts, error: dbError } = await supabase
-        .from('products')
-        .select('id, title, price, status, reserved_until')
-        .in('id', productIds);
-
-      if (dbError) {
-        console.error('[Security Check] Error al verificar productos en Supabase:', dbError);
-        return res.status(500).json({ error: 'Error al verificar integridad del catálogo' });
+    const { data: reservedProducts, error: reserveError } = await supabaseClient.rpc(
+      'reserve_products_atomic',
+      {
+        p_product_ids: productIds,
+        p_minutes: TTL_MINUTES
       }
+    );
 
-      if (!dbProducts || dbProducts.length !== productIds.length) {
-        return res.status(400).json({ 
-          error: 'Una o más prendas solicitadas ya no existen o no son válidas.' 
-        });
-      }
-
-      // Validar disponibilidad de stock (moda circular 1/1)
-      const isCurrentlyReserved = (p: any) => {
-        if (p.status === 'reserved' && p.reserved_until) {
-          return new Date(p.reserved_until).getTime() > now.getTime();
-        }
-        return false;
-      };
-
-      const unavailable = dbProducts.filter(p => p.status === 'sold' || p.status === 'archived' || isCurrentlyReserved(p));
-      if (unavailable.length > 0) {
-        return res.status(409).json({
-          error: 'Una o más prendas están en proceso de compra por otro cliente o ya fueron vendidas.',
-          unavailableItems: unavailable.map(u => u.title)
-        });
-      }
-
-      // Reserva atómica con TTL de 15 minutos en Supabase
-      const { data: reservedProducts, error: reserveError } = await supabase
-        .from('products')
-        .update({
-          status: 'reserved',
-          reserved_until: expiresAt.toISOString(),
-          updated_at: now.toISOString()
-        })
-        .in('id', productIds)
-        .select('id, title');
-
-      if (reserveError || !reservedProducts || reservedProducts.length !== productIds.length) {
-        console.error('[Reservation Conflict] No se pudo concretar el bloqueo temporal:', reserveError);
-        return res.status(409).json({
-          error: 'Conflicto de stock: una o más prendas acaban de ser reservadas por otro comprador.'
-        });
-      }
-
-      // Mapear con precios OFICIALES de la base de datos (inmune a manipulación del cliente)
-      mpItems = dbProducts.map(p => ({
-        id: p.id,
-        title: p.title.slice(0, 120), // Truncar para prevenir DoS en payload de MP
-        unit_price: Number(p.price),
-        quantity: 1,
-        currency_id: 'ARS'
-      }));
-    } else {
-      // Fallback seguro de emergencia si Supabase no está conectado
-      mpItems = items.map(item => ({
-        id: String(item.id),
-        title: String(item.title || 'Prenda').slice(0, 120),
-        unit_price: Math.max(0, Number(item.unit_price) || 0),
-        quantity: 1,
-        currency_id: 'ARS'
-      }));
+    if (reserveError || !reservedProducts || reservedProducts.length !== productIds.length) {
+      console.warn('[Reservation Conflict] Reserva atómica rechazada:', reserveError?.message || 'Stock no disponible');
+      return res.status(409).json({
+        error: 'Una o más prendas están en proceso de compra por otro cliente, no existen o ya fueron vendidas.'
+      });
     }
+
+    reservedInDb = true;
+
+    // Mapear con precios OFICIALES de la base de datos (inmune a manipulación del cliente)
+    const mpItems = reservedProducts.map((p: { id: string; title: string; price: number }) => ({
+      id: p.id,
+      title: String(p.title || 'Prenda').slice(0, 120),
+      unit_price: Number(p.price),
+      quantity: 1,
+      currency_id: 'ARS'
+    }));
 
     // Costo de Envío verificado
     const validatedShippingCost = Math.max(0, Number(shippingCost) || 0);
@@ -167,10 +176,6 @@ export default async function handler(req: any, res: any) {
         currency_id: 'ARS'
       });
     }
-
-    const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost';
-    const protocol = req.headers['x-forwarded-proto'] || 'https';
-    const baseUrl = `${protocol}://${host}`;
 
     // Sanitización básica del pagador
     const cleanPayer = {
@@ -195,7 +200,7 @@ export default async function handler(req: any, res: any) {
       },
       auto_return: 'approved',
       statement_descriptor: 'ESVEN MODA CIRCULAR',
-      external_reference: items.map(i => i.id).join(','),
+      external_reference: productIds.join(','),
       notification_url: `${baseUrl}/api/webhook`
     };
 
@@ -212,6 +217,7 @@ export default async function handler(req: any, res: any) {
 
     if (!mpResponse.ok) {
       console.error('[Mercado Pago API error]:', mpData);
+      await rollbackReservation();
       return res.status(502).json({ error: 'Error comunicando con pasarela de pago' });
     }
 
@@ -220,11 +226,12 @@ export default async function handler(req: any, res: any) {
       init_point: mpData.init_point,
       sandbox_init_point: mpData.sandbox_init_point,
       reservationExpiresAt: expiresAt.toISOString(),
-      reservedProductIds: items.map(i => i.id)
+      reservedProductIds: productIds
     });
 
   } catch (err: any) {
     console.error('[Security Exception] Error generando preferencia de pago:', err);
+    await rollbackReservation();
     return res.status(500).json({ error: 'Error interno en el servidor de pagos' });
   }
 }

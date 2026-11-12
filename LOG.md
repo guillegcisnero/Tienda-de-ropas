@@ -4,6 +4,19 @@ Este documento registra cronológicamente los hitos, refactorizaciones y avances
 
 ---
 
+### [2026-11-12 09:45] — Remediación de Seguridad Fase 1 (Contención DB & Serverless Fail-Closed)
+- **Base de Datos (`supabase_schema.sql`):**
+  - Endurecida política RLS `"Public Insert Orders"` en `public.orders` exigiendo `payment_status = 'pending'` y `gateway_payment_id IS NULL` en inserciones públicas.
+  - Restringido `reserve_product_for_checkout` (`p_minutes` acotado a `1..15`, `SET search_path = public, pg_temp`, `EXECUTE` revocado a `PUBLIC`/`anon`/`authenticated` y otorgado exclusivamente a `service_role`).
+  - Creada RPC atómica multi-prenda `reserve_products_atomic` con bloqueo `FOR UPDATE` ordenado (solo `service_role`) y endurecido `release_expired_reservations` con `SET search_path = public, pg_temp`.
+- **Serverless (`api/create-preference.ts`, `api/webhook.ts`, `.env.example`):**
+  - `api/create-preference.ts`: fail-closed si faltan `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` o `APP_URL`/`VERCEL_URL` cuando `MERCADOPAGO_ACCESS_TOKEN` está activo; reserva atómica vía `reserve_products_atomic` con rollback automático si falla Mercado Pago; eliminado armado de `baseUrl` desde cabeceras `x-forwarded-host`/`host`.
+  - `api/webhook.ts`: verificación HMAC obligatoria (fail-closed si falta `MERCADOPAGO_WEBHOOK_SECRET`), exigencia de `SUPABASE_SERVICE_ROLE_KEY`, idempotencia por `gateway_payment_id`, validación de moneda (`ARS`) y monto (`transaction_amount >= expectedProductsTotal`), y propagación de errores `500` ante fallos de actualización en Supabase.
+  - `.env.example`: documentadas `APP_URL` y `SUPABASE_URL` en sección Backend Serverless.
+- **Verificación:** `npm.cmd run lint` (`tsc --noEmit`) y `npm.cmd run build` ejecutados sin errores.
+
+---
+
 ### [2026-11-08 23:20] — Implementación Integral de Arbitraje de Stock 1/1 y Checkout Seguro (Punto 4)
 - **Fase 1 (Backend & Reserva Atómica / Fury & Viernes):**
   - Modificado `api/create-preference.ts`: implementado bloqueo atómico condicional en Supabase (`status = 'reserved'`, `reserved_until = NOW() + 15 min`) antes de invocar la API de Mercado Pago. Si una prenda no está disponible o tiene reserva vigente, responde 409 Conflict.

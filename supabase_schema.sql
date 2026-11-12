@@ -104,12 +104,14 @@ CREATE POLICY "Users can manage own favorites" ON public.favorites
     FOR ALL USING (auth.uid() = user_id)
     WITH CHECK (auth.uid() = user_id);
 
--- Órdenes: Inserción permitida para checkout con validación estricta de estructura
+-- Órdenes: Inserción permitida para checkout con validación estricta de estructura y estado inicial
 DROP POLICY IF EXISTS "Public Insert Orders" ON public.orders;
 CREATE POLICY "Public Insert Orders" ON public.orders
     FOR INSERT WITH CHECK (
         total_amount >= 0 AND
         gateway IN ('mercadopago', 'whatsapp') AND
+        payment_status = 'pending' AND
+        gateway_payment_id IS NULL AND
         jsonb_typeof(items) = 'array'
     );
 
@@ -182,30 +184,120 @@ EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
 
--- 5. FUNCIÓN ATÓMICA DE RESERVA (STOCK = 1 SIN RACE CONDITIONS)
-CREATE OR REPLACE FUNCTION reserve_product_for_checkout(
+-- 5. FUNCIÓN ATÓMICA DE RESERVA (STOCK = 1 SIN RACE CONDITIONS — SOLO SERVICE ROLE)
+CREATE OR REPLACE FUNCTION public.reserve_product_for_checkout(
     p_product_id TEXT, 
     p_minutes INTEGER DEFAULT 10
 )
-RETURNS BOOLEAN AS $$
-DECLARE
-    v_updated BOOLEAN;
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
 BEGIN
+    IF p_minutes IS NULL OR p_minutes < 1 OR p_minutes > 15 THEN
+        RAISE EXCEPTION 'p_minutes debe estar entre 1 y 15';
+    END IF;
+
     UPDATE public.products
     SET 
         status = 'reserved',
-        reserved_until = NOW() + (p_minutes || ' minutes')::INTERVAL,
+        reserved_until = NOW() + make_interval(mins => p_minutes),
         updated_at = NOW()
     WHERE id = p_product_id 
-      AND status = 'available';
+      AND (
+          status = 'available'
+          OR (status = 'reserved' AND reserved_until < NOW())
+      );
     
     RETURN FOUND;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
+
+REVOKE ALL ON FUNCTION public.reserve_product_for_checkout(TEXT, INTEGER) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.reserve_product_for_checkout(TEXT, INTEGER) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.reserve_product_for_checkout(TEXT, INTEGER) TO service_role;
+
+-- 5.1 FUNCIÓN ATÓMICA EN LOTE PARA CHECKOUT MULTI-PRENDA (CON FOR UPDATE)
+CREATE OR REPLACE FUNCTION public.reserve_products_atomic(
+    p_product_ids TEXT[],
+    p_minutes INTEGER DEFAULT 15
+)
+RETURNS TABLE (id TEXT, title TEXT, price NUMERIC)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+    v_unique_ids TEXT[];
+    v_expected_count INTEGER;
+    v_locked_count INTEGER;
+    v_unavailable_count INTEGER;
+BEGIN
+    IF p_minutes IS NULL OR p_minutes < 1 OR p_minutes > 15 THEN
+        RAISE EXCEPTION 'p_minutes debe estar entre 1 y 15';
+    END IF;
+
+    SELECT ARRAY(
+        SELECT DISTINCT trim(x)
+        FROM unnest(p_product_ids) AS x
+        WHERE trim(x) <> ''
+        ORDER BY 1
+    ) INTO v_unique_ids;
+
+    v_expected_count := COALESCE(array_length(v_unique_ids, 1), 0);
+    IF v_expected_count = 0 THEN
+        RAISE EXCEPTION 'Se requiere al menos un product_id válido';
+    END IF;
+
+    -- Bloqueo pesimista en orden determinístico para prevenir deadlocks y TOCTOU
+    SELECT
+        COUNT(*),
+        COUNT(*) FILTER (
+            WHERE NOT (
+                p.status = 'available'
+                OR (p.status = 'reserved' AND p.reserved_until < NOW())
+            )
+        )
+    INTO v_locked_count, v_unavailable_count
+    FROM (
+        SELECT p.id, p.status, p.reserved_until
+        FROM public.products p
+        WHERE p.id = ANY(v_unique_ids)
+        ORDER BY p.id
+        FOR UPDATE
+    ) p;
+
+    IF v_locked_count <> v_expected_count THEN
+        RAISE EXCEPTION 'Una o más prendas solicitadas no existen';
+    END IF;
+
+    IF v_unavailable_count > 0 THEN
+        RAISE EXCEPTION 'Una o más prendas ya están reservadas o vendidas';
+    END IF;
+
+    RETURN QUERY
+    UPDATE public.products p
+    SET
+        status = 'reserved',
+        reserved_until = NOW() + make_interval(mins => p_minutes),
+        updated_at = NOW()
+    WHERE p.id = ANY(v_unique_ids)
+    RETURNING p.id, p.title, p.price;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.reserve_products_atomic(TEXT[], INTEGER) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.reserve_products_atomic(TEXT[], INTEGER) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.reserve_products_atomic(TEXT[], INTEGER) TO service_role;
 
 -- 6. RUTINA PARA DESBLOQUEAR RESERVAS EXPIRADAS
-CREATE OR REPLACE FUNCTION release_expired_reservations()
-RETURNS INTEGER AS $$
+CREATE OR REPLACE FUNCTION public.release_expired_reservations()
+RETURNS INTEGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
 DECLARE
     v_count INTEGER;
 BEGIN
@@ -220,7 +312,7 @@ BEGIN
     GET DIAGNOSTICS v_count = ROW_COUNT;
     RETURN v_count;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 -- 7. SEED DATA (Desactivado para inicio con catálogo 100% limpio)
 -- Para sembrar prendas de prueba, descomentar el bloque siguiente:
