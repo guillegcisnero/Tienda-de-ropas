@@ -4,6 +4,16 @@ Este documento registra cronológicamente los hitos, refactorizaciones y avances
 
 ---
 
+### [2026-11-12 13:18] — Remediación de Seguridad Fase 3 (Blindaje de Autenticación, RLS Unificado y Revocaciones)
+- **Base de Datos (`supabase_schema.sql`):**
+  - RLS unificado en `public.products`, `public.orders`, `public.shipping_rates` y `storage.objects`: autorización por claim de Supabase Auth `(auth.jwt() -> 'app_metadata' ->> 'role' = 'admin')`, manteniendo compatibilidad con email autorizado y `service_role`.
+  - Blindaje estricto en `public.revocations`: política pública de inserción asegurada con `WITH CHECK (status = 'solicitado' AND resolution_notes IS NULL)`, impidiendo que un atacante cree solicitudes marcadas como aprobadas o inyecte resoluciones apócrifas.
+- **Frontend & Autenticación (`AdminDashboard.tsx`):**
+  - Desactivado por completo el fallback de autenticación simulada ("demo bypass") en entornos de producción (`import.meta.env.PROD`).
+- **Verificación:** `npm.cmd run lint` (`tsc --noEmit`) y `npm.cmd run build` ejecutados exitosamente con 0 errores.
+
+---
+
 ### [2026-11-12 12:55] — Remediación de Seguridad Fase 2 (Envíos en DB, Tokens de Reserva y Pedidos WhatsApp Validados)
 - **Base de Datos (`supabase_schema.sql`):**
   - Creada tabla privada `public.product_reservations` con RLS habilitado (sin políticas para anon/authenticated, exclusiva para `service_role`). Almacena tokens criptográficos de reserva por prenda con TTL e índice de búsqueda.

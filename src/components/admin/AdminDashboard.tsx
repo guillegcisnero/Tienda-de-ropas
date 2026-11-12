@@ -144,7 +144,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         setIsAuthenticated(true);
         setAdminUserEmail(signInData.session.user.email || ADMIN_EMAIL);
       } else {
-        // Modo demo local / sin backend
+        // En producción nunca permitir login demo sin Supabase configurado
+        if (import.meta.env.PROD) {
+          throw new Error('BACKEND_NOT_CONFIGURED');
+        }
+        // Modo demo exclusivo para desarrollo local (import.meta.env.DEV)
         setIsAuthenticated(true);
       }
     } catch {

@@ -90,11 +90,13 @@ CREATE POLICY "Public Read Available Products" ON public.products
 DROP POLICY IF EXISTS "Admin Full Products Access" ON public.products;
 CREATE POLICY "Admin Full Products Access" ON public.products
     FOR ALL USING (
-        auth.jwt() ->> 'email' = 'guillegcisnero@gmail.com' 
+        (auth.jwt() -> 'app_metadata' ->> 'role' = 'admin')
+        OR (auth.jwt() ->> 'email' = 'guillegcisnero@gmail.com') 
         OR auth.role() = 'service_role'
     )
     WITH CHECK (
-        auth.jwt() ->> 'email' = 'guillegcisnero@gmail.com' 
+        (auth.jwt() -> 'app_metadata' ->> 'role' = 'admin')
+        OR (auth.jwt() ->> 'email' = 'guillegcisnero@gmail.com') 
         OR auth.role() = 'service_role'
     );
 
@@ -119,14 +121,16 @@ CREATE POLICY "Public Insert Orders" ON public.orders
 DROP POLICY IF EXISTS "Admin Read Orders" ON public.orders;
 CREATE POLICY "Admin Read Orders" ON public.orders
     FOR SELECT USING (
-        auth.jwt() ->> 'email' = 'guillegcisnero@gmail.com' 
+        (auth.jwt() -> 'app_metadata' ->> 'role' = 'admin')
+        OR (auth.jwt() ->> 'email' = 'guillegcisnero@gmail.com') 
         OR auth.role() = 'service_role'
     );
 
 DROP POLICY IF EXISTS "Admin Manage Orders" ON public.orders;
 CREATE POLICY "Admin Manage Orders" ON public.orders
     FOR UPDATE USING (
-        auth.jwt() ->> 'email' = 'guillegcisnero@gmail.com' 
+        (auth.jwt() -> 'app_metadata' ->> 'role' = 'admin')
+        OR (auth.jwt() ->> 'email' = 'guillegcisnero@gmail.com') 
         OR auth.role() = 'service_role'
     );
 
@@ -325,6 +329,68 @@ ON CONFLICT (id) DO NOTHING;
 */
 
 -- ========================================================
+-- 9. TABLA DE REVOCACIONES Y ARREPENTIMIENTO (LEY 24.240 / RES. 424/2020)
+-- Registro auditable de solicitudes del "Botón de Arrepentimiento"
+-- FASE 3: Inserción pública restringida con WITH CHECK anti-manipulación
+-- ========================================================
+CREATE TABLE IF NOT EXISTS public.revocations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    code TEXT UNIQUE NOT NULL,                       -- Ej: 'REV-2026-A1B2'
+    order_code TEXT NOT NULL,                        -- Código de orden vinculada
+    customer_name TEXT NOT NULL,
+    customer_email TEXT NOT NULL,
+    customer_phone TEXT NOT NULL,
+    reason TEXT,                                     -- Motivo opcional del consumidor
+    status TEXT NOT NULL DEFAULT 'solicitado',       -- 'solicitado', 'inspeccion_pendiente', 'aprobado', 'rechazado'
+    resolution_notes TEXT,                           -- Notas internas de inspección
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Índices de auditoría y búsqueda rápida
+CREATE INDEX IF NOT EXISTS idx_revocations_code ON public.revocations(code);
+CREATE INDEX IF NOT EXISTS idx_revocations_order_code ON public.revocations(order_code);
+CREATE INDEX IF NOT EXISTS idx_revocations_created_at ON public.revocations(created_at DESC);
+
+-- Políticas de Seguridad (RLS) para proteger los datos personales (Ley 25.326)
+ALTER TABLE public.revocations ENABLE ROW LEVEL SECURITY;
+
+-- Los clientes pueden registrar su solicitud de arrepentimiento de forma anónima/pública (Res. 424/2020 no permite exigir login previo)
+-- Blindaje Fase 3: solo pueden crearse con estado inicial 'solicitado' y sin notas internas de resolución
+DROP POLICY IF EXISTS "Permitir inserción pública de solicitudes de arrepentimiento" ON public.revocations;
+CREATE POLICY "Permitir inserción pública de solicitudes de arrepentimiento"
+    ON public.revocations
+    FOR INSERT
+    TO public
+    WITH CHECK (
+        status = 'solicitado'
+        AND resolution_notes IS NULL
+    );
+
+-- Solo el administrador autorizado puede consultar o modificar solicitudes de arrepentimiento
+DROP POLICY IF EXISTS "Lectura restringida de revocaciones para administradores" ON public.revocations;
+CREATE POLICY "Lectura restringida de revocaciones para administradores"
+    ON public.revocations
+    FOR SELECT
+    TO authenticated
+    USING (
+        (auth.jwt() -> 'app_metadata' ->> 'role' = 'admin')
+        OR (auth.jwt() ->> 'email' = 'guillegcisnero@gmail.com')
+        OR auth.role() = 'service_role'
+    );
+
+DROP POLICY IF EXISTS "Actualización restringida de revocaciones para administradores" ON public.revocations;
+CREATE POLICY "Actualización restringida de revocaciones para administradores"
+    ON public.revocations
+    FOR UPDATE
+    TO authenticated
+    USING (
+        (auth.jwt() -> 'app_metadata' ->> 'role' = 'admin')
+        OR (auth.jwt() ->> 'email' = 'guillegcisnero@gmail.com')
+        OR auth.role() = 'service_role'
+    );
+
+-- ========================================================
 -- 10. TABLA DE RESERVAS CON TOKEN DE PROPIEDAD (FASE 2)
 -- Mitiga VULN-003: Cada reserva genera un token criptográfico
 -- solo el poseedor del token o service_role puede liberarla.
@@ -376,11 +442,13 @@ CREATE POLICY "Admin Manage Shipping Rates"
     FOR ALL
     TO authenticated
     USING (
-        auth.jwt() ->> 'email' = 'guillegcisnero@gmail.com'
+        (auth.jwt() -> 'app_metadata' ->> 'role' = 'admin')
+        OR (auth.jwt() ->> 'email' = 'guillegcisnero@gmail.com')
         OR auth.role() = 'service_role'
     )
     WITH CHECK (
-        auth.jwt() ->> 'email' = 'guillegcisnero@gmail.com'
+        (auth.jwt() -> 'app_metadata' ->> 'role' = 'admin')
+        OR (auth.jwt() ->> 'email' = 'guillegcisnero@gmail.com')
         OR auth.role() = 'service_role'
     );
 
