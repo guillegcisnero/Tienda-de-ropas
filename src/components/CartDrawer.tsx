@@ -12,6 +12,7 @@ interface CartDrawerProps {
   unavailableItems: Product[];
   onRemoveItem: (id: string) => void;
   shipping: ShippingConfig;
+  shippingRates?: Record<string, { name: string; price: number; days: string }>;
   onShippingChange: (serviceKey: string) => void;
   onProceedToCheckout: () => void;
   onExplore: () => void;
@@ -25,12 +26,15 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   unavailableItems,
   onRemoveItem,
   shipping,
+  shippingRates,
   onShippingChange,
   onProceedToCheckout,
   onExplore,
   onMoveToFavorites
 }) => {
   if (!isOpen) return null;
+
+  const activeRates = shippingRates || SHIPPING_RATES;
 
   // El subtotal y total solo computan las prendas que están disponibles
   const subtotal = availableItems.reduce((sum, item) => sum + item.price, 0);
@@ -217,12 +221,14 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
                   <select
                     value={
-                      Object.keys(SHIPPING_RATES).find(key => SHIPPING_RATES[key].name === shipping.service) || 'cabaGba'
+                      shipping.regionKey ||
+                      Object.keys(activeRates).find(key => activeRates[key].name === shipping.service) ||
+                      'cabaGba'
                     }
                     onChange={(e) => onShippingChange(e.target.value)}
                     className="w-full text-xs bg-[#FBFBF9] dark:bg-[#121212] text-[#1A1A1A] dark:text-[#F5F5F0] border border-[#E8E6E1] dark:border-[#282826] rounded-xl p-2.5 focus:border-[#C5A880] focus:outline-none"
                   >
-                    {Object.entries(SHIPPING_RATES).map(([key, rate]) => (
+                    {Object.entries(activeRates).map(([key, rate]) => (
                       <option key={key} value={key}>
                         {rate.name} - {rate.price === 0 ? 'Gratis' : formatPrice(rate.price)} ({rate.days})
                       </option>

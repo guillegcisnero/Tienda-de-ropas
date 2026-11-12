@@ -1,10 +1,11 @@
-import React, { useState, lazy, Suspense, useCallback } from 'react';
+import React, { useState, useEffect, lazy, Suspense, useCallback } from 'react';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
 import { FiltersBar } from './components/FiltersBar';
 import { ProductCard } from './components/ProductCard';
 import { Footer } from './components/Footer';
 import { STORE_CONFIG, SHIPPING_RATES } from './data/mockCatalog';
+import { getShippingRates } from './services/shippingService';
 import { Product, ShippingConfig } from './types';
 import { useCart } from './hooks/useCart';
 import { useCatalog } from './hooks/useCatalog';
@@ -82,13 +83,34 @@ export default function App() {
   } = useCatalogFilters(products);
 
   // Estado de Envío
+  const [shippingRates, setShippingRates] = useState(SHIPPING_RATES);
   const [shipping, setShipping] = useState<ShippingConfig>({
     province: 'CABA',
     postalCode: '1425',
     type: 'shipping',
     cost: SHIPPING_RATES.cabaGba.price,
-    service: SHIPPING_RATES.cabaGba.name
+    service: SHIPPING_RATES.cabaGba.name,
+    regionKey: 'cabaGba'
   });
+
+  useEffect(() => {
+    getShippingRates().then(rates => {
+      setShippingRates(rates);
+      setShipping(prev => {
+        const currentKey = prev.regionKey || 'cabaGba';
+        const rate = rates[currentKey] || rates.cabaGba;
+        if (rate) {
+          return {
+            ...prev,
+            cost: rate.price,
+            service: rate.name,
+            regionKey: currentKey
+          };
+        }
+        return prev;
+      });
+    });
+  }, []);
 
   // Modales y Drawers
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -159,13 +181,14 @@ export default function App() {
   }, [isFavorite, toggleFavorite, showToast]);
 
   const handleShippingChange = useCallback((regionKey: string) => {
-    const rate = SHIPPING_RATES[regionKey] || SHIPPING_RATES.cabaGba;
+    const rate = shippingRates[regionKey] || shippingRates.cabaGba || SHIPPING_RATES.cabaGba;
     setShipping(prev => ({
       ...prev,
       cost: rate.price,
-      service: rate.name
+      service: rate.name,
+      regionKey
     }));
-  }, []);
+  }, [shippingRates]);
 
   const handleOpenDetail = useCallback((product: Product) => {
     setSelectedProduct(product);
@@ -366,6 +389,7 @@ export default function App() {
               showToast('Prenda pasada a tus favoritos');
             }}
             onShippingChange={handleShippingChange}
+            shippingRates={shippingRates}
             onProceedToCheckout={() => setIsCheckoutOpen(true)}
             onExplore={handleScrollToCatalog}
           />

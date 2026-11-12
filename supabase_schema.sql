@@ -325,56 +325,76 @@ ON CONFLICT (id) DO NOTHING;
 */
 
 -- ========================================================
--- 9. TABLA DE REVOCACIONES Y ARREPENTIMIENTO (LEY 24.240 / RES. 424/2020)
--- Registro auditable de solicitudes del "Botón de Arrepentimiento"
+-- 10. TABLA DE RESERVAS CON TOKEN DE PROPIEDAD (FASE 2)
+-- Mitiga VULN-003: Cada reserva genera un token criptográfico
+-- solo el poseedor del token o service_role puede liberarla.
 -- ========================================================
-CREATE TABLE IF NOT EXISTS public.revocations (
+CREATE TABLE IF NOT EXISTS public.product_reservations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    code TEXT UNIQUE NOT NULL,                       -- Ej: 'REV-2026-A1B2'
-    order_code TEXT NOT NULL,                        -- Código de orden vinculada
-    customer_name TEXT NOT NULL,
-    customer_email TEXT NOT NULL,
-    customer_phone TEXT NOT NULL,
-    reason TEXT,                                     -- Motivo opcional del consumidor
-    status TEXT NOT NULL DEFAULT 'solicitado',       -- 'solicitado', 'inspeccion_pendiente', 'aprobado', 'rechazado'
-    resolution_notes TEXT,                           -- Notas internas de inspección
-    created_at TIMESTAMPTZ DEFAULT NOW(),
+    product_id UUID NOT NULL REFERENCES public.products(id) ON DELETE CASCADE,
+    reservation_token TEXT NOT NULL,
+    reserved_until TIMESTAMPTZ NOT NULL,
+    ip_hash TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_product_reservations_token ON public.product_reservations(reservation_token);
+CREATE INDEX IF NOT EXISTS idx_product_reservations_product ON public.product_reservations(product_id);
+CREATE INDEX IF NOT EXISTS idx_product_reservations_until ON public.product_reservations(reserved_until);
+
+ALTER TABLE public.product_reservations ENABLE ROW LEVEL SECURITY;
+-- Tabla 100% privada: no se definen políticas para anon ni authenticated.
+-- Solo service_role tiene acceso backend.
+
+-- ========================================================
+-- 11. TABLA DE TARIFAS DE ENVÍO OFICIALES (FASE 2)
+-- Mitiga VULN-004: Fuente de verdad de envíos en base de datos.
+-- ========================================================
+CREATE TABLE IF NOT EXISTS public.shipping_rates (
+    id TEXT PRIMARY KEY,                       -- Ej: 'cabaGba', 'centro', 'cuyoNoaNea', 'patagonia', 'pickup'
+    name TEXT NOT NULL,                        -- Ej: 'CABA / GBA - Correo Argentino'
+    price NUMERIC(10,2) NOT NULL DEFAULT 0 CHECK (price >= 0),
+    days TEXT NOT NULL,                        -- Ej: '24 a 48 hs hábiles'
+    active BOOLEAN NOT NULL DEFAULT true,
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Índices de auditoría y búsqueda rápida
-CREATE INDEX IF NOT EXISTS idx_revocations_code ON public.revocations(code);
-CREATE INDEX IF NOT EXISTS idx_revocations_order_code ON public.revocations(order_code);
-CREATE INDEX IF NOT EXISTS idx_revocations_created_at ON public.revocations(created_at DESC);
+ALTER TABLE public.shipping_rates ENABLE ROW LEVEL SECURITY;
 
--- Políticas de Seguridad (RLS) para proteger los datos personales (Ley 25.326)
-ALTER TABLE public.revocations ENABLE ROW LEVEL SECURITY;
-
--- Los clientes pueden registrar su solicitud de arrepentimiento de forma anónima/pública (Res. 424/2020 no permite exigir login previo)
-CREATE POLICY "Permitir inserción pública de solicitudes de arrepentimiento"
-    ON public.revocations
-    FOR INSERT
-    TO public
-    WITH CHECK (true);
-
--- Solo el administrador autorizado puede consultar o modificar solicitudes de arrepentimiento
-DROP POLICY IF EXISTS "Lectura restringida de revocaciones para administradores" ON public.revocations;
-CREATE POLICY "Lectura restringida de revocaciones para administradores"
-    ON public.revocations
+-- Catálogo de envíos legible públicamente
+DROP POLICY IF EXISTS "Public Read Shipping Rates" ON public.shipping_rates;
+CREATE POLICY "Public Read Shipping Rates"
+    ON public.shipping_rates
     FOR SELECT
+    TO public
+    USING (true);
+
+-- Modificación solo para administradores autenticados o backend
+DROP POLICY IF EXISTS "Admin Manage Shipping Rates" ON public.shipping_rates;
+CREATE POLICY "Admin Manage Shipping Rates"
+    ON public.shipping_rates
+    FOR ALL
     TO authenticated
     USING (
-        auth.jwt() ->> 'email' = 'guillegcisnero@gmail.com' 
+        auth.jwt() ->> 'email' = 'guillegcisnero@gmail.com'
+        OR auth.role() = 'service_role'
+    )
+    WITH CHECK (
+        auth.jwt() ->> 'email' = 'guillegcisnero@gmail.com'
         OR auth.role() = 'service_role'
     );
 
-DROP POLICY IF EXISTS "Actualización restringida de revocaciones para administradores" ON public.revocations;
-CREATE POLICY "Actualización restringida de revocaciones para administradores"
-    ON public.revocations
-    FOR UPDATE
-    TO authenticated
-    USING (
-        auth.jwt() ->> 'email' = 'guillegcisnero@gmail.com' 
-        OR auth.role() = 'service_role'
-    );
+-- Semilla inicial de tarifas
+INSERT INTO public.shipping_rates (id, name, price, days, active)
+VALUES 
+    ('cabaGba', 'CABA / GBA - Correo Argentino', 3500, '24 a 48 hs hábiles', true),
+    ('centro', 'Buenos Aires Interior / Córdoba / Santa Fe', 5200, '2 a 4 días hábiles', true),
+    ('cuyoNoaNea', 'Cuyo, NOA y NEA', 6800, '3 a 5 días hábiles', true),
+    ('patagonia', 'Patagonia Argentina', 8200, '4 a 6 días hábiles', true),
+    ('pickup', 'Retiro en punto de encuentro (Lanús / CABA)', 0, 'A coordinar gratis', true)
+ON CONFLICT (id) DO UPDATE
+SET 
+    name = EXCLUDED.name,
+    days = EXCLUDED.days,
+    updated_at = NOW();
 

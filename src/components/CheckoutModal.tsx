@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { X, CreditCard, MessageCircle, ShieldCheck, Clock, ExternalLink, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Product, ShippingConfig, BuyerInfo } from '../types';
 import { createPaymentPreference, releasePaymentReservation } from '../services/payment';
+import { createWhatsAppOrder } from '../services/whatsappOrderService';
 import { buildWhatsAppOrderUrl } from '../services/whatsapp';
 import { formatPrice } from '../utils/formatters';
 import { createOrder } from '../services/orderService';
@@ -21,7 +22,8 @@ interface CheckoutModalProps {
 interface ActiveReservation {
   expiresAt: number; // timestamp en ms
   productIds: string[];
-  initPoint: string;
+  initPoint?: string;
+  reservationToken?: string;
 }
 
 export const CheckoutModal: React.FC<CheckoutModalProps> = ({
@@ -62,7 +64,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       setTimeLeftSeconds(remainingSec);
       if (remainingSec === 0) {
         // Expiró el tiempo de reserva pasivo
-        releasePaymentReservation(activeReservation.productIds).catch(() => {});
+        releasePaymentReservation(activeReservation.productIds, activeReservation.reservationToken).catch(() => {});
       }
     };
 
@@ -75,7 +77,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     if (activeReservation && timeLeftSeconds > 0 && !paymentVerified) {
       const confirmClose = window.confirm('¿Querés cancelar tu reserva de 15 minutos y liberar las prendas para otros compradores?');
       if (confirmClose) {
-        await releasePaymentReservation(activeReservation.productIds);
+        await releasePaymentReservation(activeReservation.productIds, activeReservation.reservationToken);
         setActiveReservation(null);
         onClose();
       }
@@ -89,7 +91,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     if (!activeReservation) return;
     setIsCancellingReservation(true);
     try {
-      await releasePaymentReservation(activeReservation.productIds);
+      await releasePaymentReservation(activeReservation.productIds, activeReservation.reservationToken);
       setActiveReservation(null);
     } finally {
       setIsCancellingReservation(false);
@@ -140,17 +142,13 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
     setIsProcessingMp(true);
     try {
-      // Registrar orden en base de datos de Supabase
-      await createOrder({
+      const response = await createPaymentPreference({
         cart,
         buyer,
         shipping,
-        total,
-        gateway: 'mercadopago',
-        paymentStatus: 'pending'
+        shippingRegion: shipping.regionKey || 'cabaGba'
       });
 
-      const response = await createPaymentPreference({ cart, buyer, shipping });
       if (response?.initPoint) {
         // Abrir Mercado Pago en nueva pestaña
         window.open(response.initPoint, '_blank');
@@ -162,7 +160,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         setActiveReservation({
           expiresAt,
           productIds: response.reservedProductIds || cart.map(i => i.id),
-          initPoint: response.initPoint
+          initPoint: response.initPoint,
+          reservationToken: response.reservationToken
         });
       } else {
         alert(response?.message || 'Hubo un inconveniente al conectar con Mercado Pago. Podés finalizar tu pedido directamente por WhatsApp.');
@@ -174,7 +173,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     }
   };
 
-  // Flujo 2: WhatsApp Directo
+  // Flujo 2: WhatsApp Directo (validado del lado del servidor)
   const handlePayWithWhatsApp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!buyer.name || !buyer.phone) {
@@ -186,26 +185,32 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       return;
     }
 
-    // Registrar orden en base de datos de Supabase
-    await createOrder({
-      cart,
-      buyer,
-      shipping,
-      total,
-      gateway: 'whatsapp',
-      paymentStatus: 'pending'
-    });
+    try {
+      const result = await createWhatsAppOrder({
+        cart,
+        buyer,
+        shipping,
+        shippingRegion: shipping.regionKey || 'cabaGba',
+        whatsappNumber
+      });
 
-    const url = buildWhatsAppOrderUrl({
-      cart,
-      buyer,
-      shipping,
-      total,
-      whatsappNumber
-    });
-    window.open(url, '_blank');
-    onSuccessOrder();
-    onClose();
+      window.open(result.waUrl, '_blank');
+      onSuccessOrder();
+      onClose();
+    } catch (err: any) {
+      console.warn('[WhatsApp Fallback]:', err);
+      // Fallback seguro si la API de backend no está accesible
+      const fallbackUrl = buildWhatsAppOrderUrl({
+        cart,
+        buyer,
+        shipping,
+        total,
+        whatsappNumber
+      });
+      window.open(fallbackUrl, '_blank');
+      onSuccessOrder();
+      onClose();
+    }
   };
 
   // Formateo del temporizador mm:ss

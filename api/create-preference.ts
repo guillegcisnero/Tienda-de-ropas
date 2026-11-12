@@ -1,23 +1,12 @@
-/**
- * Serverless API Route para crear preferencia en Mercado Pago
- * Compatible con Vercel Serverless Functions (Node.js runtime)
- * 
- * MEDIDAS DE CIBERSEGURIDAD APLICADAS:
- * - Anti-Parameter Tampering: Los precios se verifican contra Supabase (fuente de verdad).
- * - Validación de Disponibilidad: Se confirma que la prenda esté 'available'.
- * - Sanitización estricta de datos de cliente.
- */
+import crypto from 'crypto';
 
 interface ItemPayload {
   id: string;
-  title?: string;
-  unit_price?: number;
-  quantity?: number;
 }
 
 interface RequestBody {
   items: ItemPayload[];
-  shippingCost?: number;
+  shippingRegion?: string;
   payer: {
     name: string;
     email: string;
@@ -30,6 +19,10 @@ interface RequestBody {
 
 // Control de concurrencia y Rate Limiting en memoria por IP (Mitigación DoS / Spam)
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+
+function hashIp(ip: string): string {
+  return crypto.createHash('sha256').update(ip).digest('hex').slice(0, 16);
+}
 
 function resolveBaseUrl(): string | null {
   const configured =
@@ -67,11 +60,10 @@ export default async function handler(req: any, res: any) {
     clientRecord.count++;
   } else {
     rateLimitMap.set(clientIp, { count: 1, resetTime: now + 60000 });
-    // Limpieza preventiva si el mapa crece
     if (rateLimitMap.size > 2000) rateLimitMap.clear();
   }
 
-  const { items, shippingCost, payer } = req.body as RequestBody;
+  const { items, shippingRegion = 'cabaGba', payer } = (req.body || {}) as RequestBody;
 
   if (!items || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'Items requeridos en formato de lista válido' });
@@ -81,16 +73,18 @@ export default async function handler(req: any, res: any) {
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  // Si aún no está configurado el Access Token en variables de entorno, devolvemos fallback simulado
+  // Si no está configurado el Access Token en variables de entorno, devolvemos fallback simulado
   if (!mpAccessToken) {
+    const reservationToken = `sim-${crypto.randomUUID()}`;
     return res.status(200).json({
       status: 'simulated',
       message: 'Modo simulado activo. Configure MERCADOPAGO_ACCESS_TOKEN en Vercel para cobros reales.',
-      init_point: null
+      init_point: null,
+      reservationToken
     });
   }
 
-  // Fail-closed: con cobros reales activos, es obligatorio contar con Service Role y URL canónica
+  // Fail-closed: en producción con cobros reales, es obligatorio contar con Service Role y URL canónica
   if (!supabaseUrl || !supabaseServiceKey) {
     console.error('[Security Misconfiguration] Faltan SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY en entorno de pagos.');
     return res.status(500).json({ error: 'Configuración del servidor de pagos incompleta.' });
@@ -108,11 +102,18 @@ export default async function handler(req: any, res: any) {
   }
 
   let reservedInDb = false;
+  let reservationToken: string | null = null;
   let supabaseClient: any = null;
 
   const rollbackReservation = async () => {
     if (!reservedInDb || !supabaseClient) return;
     try {
+      if (reservationToken) {
+        await supabaseClient
+          .from('product_reservations')
+          .delete()
+          .eq('reservation_token', reservationToken);
+      }
       await supabaseClient
         .from('products')
         .update({
@@ -129,16 +130,14 @@ export default async function handler(req: any, res: any) {
   };
 
   try {
-    // ========================================================
-    // BLINDAJE ANTI-TAMPERING & RESERVA ATÓMICA CON TTL (15 MIN)
-    // ========================================================
-    const nowDate = new Date();
     const TTL_MINUTES = 15;
+    const nowDate = new Date();
     const expiresAt = new Date(nowDate.getTime() + TTL_MINUTES * 60 * 1000);
 
     const { createClient } = await import('@supabase/supabase-js');
     supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
 
+    // 1. Reserva atómica en base de datos
     const { data: reservedProducts, error: reserveError } = await supabaseClient.rpc(
       'reserve_products_atomic',
       {
@@ -156,7 +155,42 @@ export default async function handler(req: any, res: any) {
 
     reservedInDb = true;
 
-    // Mapear con precios OFICIALES de la base de datos (inmune a manipulación del cliente)
+    // 2. Generar token de posesión de reserva y persistir en product_reservations
+    reservationToken = crypto.randomBytes(24).toString('hex');
+    const reservationRows = productIds.map(pid => ({
+      product_id: pid,
+      reservation_token: reservationToken,
+      reserved_until: expiresAt.toISOString(),
+      ip_hash: hashIp(clientIp)
+    }));
+
+    const { error: tokenInsertError } = await supabaseClient
+      .from('product_reservations')
+      .insert(reservationRows);
+
+    if (tokenInsertError) {
+      console.error('[Reservation Token Error]:', tokenInsertError);
+      // No bloquea el flujo si la tabla aún se está migrando, pero loguea la anomalía
+    }
+
+    // 3. Obtener tarifa de envío OFICIAL desde base de datos (Anti-tampering VULN-004)
+    let validatedShippingCost = 0;
+    let shippingName = 'Envío a Domicilio';
+
+    if (shippingRegion) {
+      const { data: rateData } = await supabaseClient
+        .from('shipping_rates')
+        .select('name, price, active')
+        .eq('id', String(shippingRegion).trim())
+        .single();
+
+      if (rateData && rateData.active) {
+        validatedShippingCost = Number(rateData.price) || 0;
+        shippingName = String(rateData.name || shippingName);
+      }
+    }
+
+    // 4. Mapear items con precios OFICIALES de la base de datos
     const mpItems = reservedProducts.map((p: { id: string; title: string; price: number }) => ({
       id: p.id,
       title: String(p.title || 'Prenda').slice(0, 120),
@@ -165,19 +199,17 @@ export default async function handler(req: any, res: any) {
       currency_id: 'ARS'
     }));
 
-    // Costo de Envío verificado
-    const validatedShippingCost = Math.max(0, Number(shippingCost) || 0);
     if (validatedShippingCost > 0) {
       mpItems.push({
         id: 'shipping-rate',
-        title: 'Costo de Envío a Domicilio',
+        title: shippingName.slice(0, 120),
         unit_price: validatedShippingCost,
         quantity: 1,
         currency_id: 'ARS'
       });
     }
 
-    // Sanitización básica del pagador
+    // 5. Sanitización del pagador
     const cleanPayer = {
       name: String(payer?.name || 'Cliente').replace(/[<>\/\\=]/g, '').slice(0, 100),
       email: String(payer?.email || 'cliente@esven.com').trim().slice(0, 120),
@@ -190,13 +222,51 @@ export default async function handler(req: any, res: any) {
       }
     };
 
+    // 6. Registrar la orden del lado del servidor (prevención de bypass)
+    const orderCode = `ESV-${Date.now().toString().slice(-6)}`;
+    const productsSubtotal = reservedProducts.reduce((sum: number, p: any) => sum + Number(p.price || 0), 0);
+    const totalOrderAmount = productsSubtotal + validatedShippingCost;
+
+    const { error: orderInsertError } = await supabaseClient
+      .from('orders')
+      .insert({
+        order_code: orderCode,
+        customer_info: {
+          name: cleanPayer.name,
+          email: cleanPayer.email,
+          phone: payer?.phone || ''
+        },
+        shipping_info: {
+          address: payer?.address || '',
+          postalCode: payer?.postalCode || '',
+          province: payer?.province || '',
+          service: shippingName,
+          cost: validatedShippingCost
+        },
+        total_amount: totalOrderAmount,
+        gateway: 'mercadopago',
+        payment_status: 'pending',
+        gateway_payment_id: null,
+        items: reservedProducts.map((p: any) => ({
+          id: p.id,
+          name: p.title,
+          price: Number(p.price),
+          quantity: 1
+        }))
+      });
+
+    if (orderInsertError) {
+      console.warn('[Server Order Insert Warning]:', orderInsertError.message);
+    }
+
+    // 7. Crear preferencia en Mercado Pago
     const preferenceData = {
       items: mpItems,
       payer: cleanPayer,
       back_urls: {
-        success: `${baseUrl}/?payment_status=success`,
-        failure: `${baseUrl}/?payment_status=failure`,
-        pending: `${baseUrl}/?payment_status=pending`
+        success: `${baseUrl}/?payment_status=success&order_code=${orderCode}`,
+        failure: `${baseUrl}/?payment_status=failure&order_code=${orderCode}`,
+        pending: `${baseUrl}/?payment_status=pending&order_code=${orderCode}`
       },
       auto_return: 'approved',
       statement_descriptor: 'ESVEN MODA CIRCULAR',
@@ -226,7 +296,9 @@ export default async function handler(req: any, res: any) {
       init_point: mpData.init_point,
       sandbox_init_point: mpData.sandbox_init_point,
       reservationExpiresAt: expiresAt.toISOString(),
-      reservedProductIds: productIds
+      reservedProductIds: productIds,
+      reservationToken,
+      orderCode
     });
 
   } catch (err: any) {

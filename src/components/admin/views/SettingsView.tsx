@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { STORE_CONFIG, SHIPPING_RATES } from '../../../data/mockCatalog';
 import { supabase, isSupabaseConfigured } from '../../../services/supabase';
+import { getShippingRates, updateShippingRate } from '../../../services/shippingService';
 
 export const SettingsView: React.FC = () => {
   // Load saved settings from localStorage or defaults
@@ -35,8 +36,15 @@ export const SettingsView: React.FC = () => {
   });
   const [interiorRate, setInteriorRate] = useState<number>(() => {
     const saved = localStorage.getItem('aura_rate_interior');
-    return saved ? Number(saved) : SHIPPING_RATES.interior.price;
+    return saved ? Number(saved) : (SHIPPING_RATES.centro?.price || 5200);
   });
+
+  useEffect(() => {
+    getShippingRates().then(rates => {
+      if (rates.cabaGba) setCabaRate(rates.cabaGba.price);
+      if (rates.centro) setInteriorRate(rates.centro.price);
+    });
+  }, []);
 
   // Password settings
   const [newPassword, setNewPassword] = useState('');
@@ -49,13 +57,19 @@ export const SettingsView: React.FC = () => {
   const [isTestingSupabase, setIsTestingSupabase] = useState(false);
   const [supabaseTestResult, setSupabaseTestResult] = useState<string | null>(null);
 
-  const handleSaveGeneral = (e: React.FormEvent) => {
+  const handleSaveGeneral = async (e: React.FormEvent) => {
     e.preventDefault();
     localStorage.setItem('aura_store_name', storeName);
     localStorage.setItem('aura_whatsapp_number', whatsapp);
     localStorage.setItem('aura_store_currency', currency);
     localStorage.setItem('aura_rate_caba', String(cabaRate));
     localStorage.setItem('aura_rate_interior', String(interiorRate));
+
+    // Sincronizar tarifas en Supabase
+    await Promise.all([
+      updateShippingRate('cabaGba', cabaRate),
+      updateShippingRate('centro', interiorRate)
+    ]).catch(err => console.warn('[SettingsView] Error sincronizando tarifas en DB:', err));
 
     setSavedNotice(true);
     setTimeout(() => setSavedNotice(false), 3500);

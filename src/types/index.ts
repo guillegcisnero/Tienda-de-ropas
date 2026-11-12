@@ -45,6 +45,7 @@ export interface ShippingConfig {
   type: 'shipping' | 'pickup';
   cost: number;
   service: string;
+  regionKey?: string;
 }
 
 export interface BuyerInfo {
