@@ -4,6 +4,24 @@ Este documento registra cronológicamente los hitos, refactorizaciones y avances
 
 ---
 
+### [2026-11-12 12:55] — Remediación de Seguridad Fase 2 (Envíos en DB, Tokens de Reserva y Pedidos WhatsApp Validados)
+- **Base de Datos (`supabase_schema.sql`):**
+  - Creada tabla privada `public.product_reservations` con RLS habilitado (sin políticas para anon/authenticated, exclusiva para `service_role`). Almacena tokens criptográficos de reserva por prenda con TTL e índice de búsqueda.
+  - Creada tabla `public.shipping_rates` con catálogo inicial de tarifas (CABA, Interior, Cuyo/NOA/NEA, Patagonia, Retiro en punto). Políticas RLS: lectura pública (`SELECT`) y escritura restringida (`ALL`) para administradores autenticados o backend.
+- **Serverless & Endpoints (`api/create-preference.ts`, `api/release-reservation.ts`, `api/create-whatsapp-order.ts`):**
+  - `api/create-preference.ts`: generación de `reservationToken` criptográfico (24 bytes hex) guardado en `product_reservations`; consulta server-side del costo de envío oficial en `shipping_rates`; registro automático de la orden pendiente en `orders` con `service_role`.
+  - `api/release-reservation.ts`: validación obligatoria de `reservationToken` para liberar únicamente las prendas del comprador respectivo, con rate limiting por IP.
+  - `api/create-whatsapp-order.ts`: nuevo endpoint serverless que valida precios de prendas contra la DB, valida tarifas de envío en `shipping_rates`, registra la orden pendiente y genera la URL sanitizada de `wa.me`.
+- **Frontend & Servicios (`src/`):**
+  - `src/services/shippingService.ts`: servicio para consultar y actualizar tarifas desde Supabase con fallback local.
+  - `src/services/whatsappOrderService.ts`: servicio para invocar `/api/create-whatsapp-order`.
+  - `src/components/CheckoutModal.tsx`: cancelación y verificación de reservas ligadas al `reservationToken`; pedidos por WhatsApp validados por backend.
+  - `src/components/CartDrawer.tsx` y `src/App.tsx`: soporte reactivo para tarifas dinámicas cargadas desde base de datos.
+  - `src/components/admin/views/SettingsView.tsx`: sincronización automática de tarifas de envío hacia Supabase al guardar parámetros.
+- **Verificación:** `npm.cmd run lint` (`tsc --noEmit`) y `npm.cmd run build` ejecutados exitosamente con 0 errores.
+
+---
+
 ### [2026-11-12 09:45] — Remediación de Seguridad Fase 1 (Contención DB & Serverless Fail-Closed)
 - **Base de Datos (`supabase_schema.sql`):**
   - Endurecida política RLS `"Public Insert Orders"` en `public.orders` exigiendo `payment_status = 'pending'` y `gateway_payment_id IS NULL` en inserciones públicas.
