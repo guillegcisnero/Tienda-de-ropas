@@ -331,7 +331,7 @@ ON CONFLICT (id) DO NOTHING;
 -- ========================================================
 CREATE TABLE IF NOT EXISTS public.product_reservations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    product_id UUID NOT NULL REFERENCES public.products(id) ON DELETE CASCADE,
+    product_id TEXT NOT NULL REFERENCES public.products(id) ON DELETE CASCADE,
     reservation_token TEXT NOT NULL,
     reserved_until TIMESTAMPTZ NOT NULL,
     ip_hash TEXT,
