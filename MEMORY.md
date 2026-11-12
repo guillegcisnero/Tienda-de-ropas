@@ -14,9 +14,15 @@
 - **Bundler:** Vite 8 (con Code Splitting automático y dynamic imports vía `React.lazy`).
 - **Estilizado & UI:** Tailwind CSS v4 + Lucide React.
 - **Backend Serverless:**
-  - `api/create-preference.ts`: Bloqueo atómico con TTL de 15 min en Supabase y generación de preferencia en Mercado Pago.
-  - `api/release-reservation.ts`: Endpoint de liberación voluntaria o por expiración de reservas temporales.
-  - `api/webhook.ts`: Webhook IPN de Mercado Pago con validación HMAC-SHA256 (pase a `'sold'` o liberación a `'available'`).
+  - `api/create-preference.ts`: Bloqueo atómico pesimista (`FOR UPDATE`) con TTL de 15 min en Supabase, tarifa oficial calculada en `shipping_rates`, token criptográfico en `product_reservations` y generación de orden server-side.
+  - `api/release-reservation.ts`: Endpoint de liberación temporal protegido por `reservationToken` y rate limiting por IP.
+  - `api/create-whatsapp-order.ts`: Creación de pedidos de WhatsApp con validación estricta de precios de prendas en DB y tarifas de envío oficiales.
+  - `api/webhook.ts`: Webhook IPN de Mercado Pago con verificación HMAC-SHA256 obligatoria (fail-closed), idempotencia por `gateway_payment_id` y validación de monto antes de pasar a `'sold'`.
+- **Base de Datos & Seguridad (Supabase):**
+  - RLS unificado con roles `app_metadata.role = 'admin'` y `service_role`.
+  - Inserción pública de órdenes restringida a `payment_status = 'pending'` y `gateway_payment_id IS NULL`.
+  - Inserción de revocaciones (Botón de Arrepentimiento) restringida a `status = 'solicitado'` y `resolution_notes IS NULL`.
+  - Tabla privada `product_reservations` y tabla pública/gestionada `shipping_rates`.
 - **Gestión de Estado (Custom Hooks):**
   - `src/hooks/useCart.ts`: Persistencia en `localStorage`, control de prenda única 1/1 y cálculo de totales.
   - `src/hooks/useCatalog.ts`: Consumo con Realtime Supabase, fail-safe estricto en producción (`mockCatalog` restringido a `DEV`) y manejo de errores.
